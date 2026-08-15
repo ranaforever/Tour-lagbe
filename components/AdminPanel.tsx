@@ -59,7 +59,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     hotel_name: ''
   });
 
-  const [newAgent, setNewAgent] = useState({ code: '', name: '' });
+  const [newAgent, setNewAgent] = useState<{ code: string; name: string; phone: string }>({ code: '', name: '', phone: '' });
   const [newType, setNewType] = useState({ type: '', fee: 0, tour_name: undefined as string | undefined });
 
   const [editTourIndex, setEditTourIndex] = useState<number | null>(null);
@@ -87,13 +87,64 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     [buses]
   );
 
+  // Group combined bookings for 1-ticket-per-group printing
+  interface GroupedTicket {
+    id: string; // group lead id
+    leadBooking: BookingInfo;
+    seatsList: string[];
+    totalSeats: number;
+    totalAdvance: number;
+    totalDue: number;
+    totalFees: number;
+    agentName: string;
+    agentCode: string;
+    agentPhone: string;
+  }
+
+  const groupedTickets = useMemo(() => {
+    const map = new Map<string, BookingInfo[]>();
+
+    allBookings.forEach(b => {
+      const gId = b.primaryBookingId || (b.totalGroupSeats && b.totalGroupSeats > 1 ? b.id : b.id);
+      if (!map.has(gId)) {
+        map.set(gId, []);
+      }
+      map.get(gId)!.push(b);
+    });
+
+    const list: GroupedTicket[] = [];
+    map.forEach((bookings, gId) => {
+      const lead = bookings.find(b => b.isPrimary || b.id === gId) || bookings[0];
+      const seats = Array.from(new Set(bookings.map(b => b.seatNo))).sort();
+      const adv = bookings.reduce((sum, b) => sum + (b.advanceAmount || 0), 0);
+      const due = bookings.reduce((sum, b) => sum + (b.dueAmount || 0), 0);
+      const fees = bookings.reduce((sum, b) => sum + (b.tourFees + (b.customerTypeFees || 0)), 0);
+      const ag = agents.find(a => a.code.toUpperCase() === lead.bookerCode.toUpperCase() || a.name.toLowerCase() === lead.bookedBy.toLowerCase());
+
+      list.push({
+        id: gId,
+        leadBooking: lead,
+        seatsList: seats,
+        totalSeats: lead.totalGroupSeats || seats.length,
+        totalAdvance: adv,
+        totalDue: due,
+        totalFees: fees,
+        agentName: lead.bookedBy || 'Admin',
+        agentCode: lead.bookerCode || '',
+        agentPhone: ag?.mobile || ag?.phone || ''
+      });
+    });
+
+    return list;
+  }, [allBookings, agents]);
+
   const filteredPrintBookings = useMemo(() => {
-    return allBookings.filter(b => {
-      const matchTour = printFilterTour === '' || b.tourName === printFilterTour;
-      const matchBooker = printFilterBooker === '' || b.bookerCode === printFilterBooker;
+    return groupedTickets.filter(g => {
+      const matchTour = printFilterTour === '' || g.leadBooking.tourName === printFilterTour;
+      const matchBooker = printFilterBooker === '' || g.leadBooking.bookerCode === printFilterBooker;
       return matchTour && matchBooker;
     });
-  }, [allBookings, printFilterTour, printFilterBooker]);
+  }, [groupedTickets, printFilterTour, printFilterBooker]);
 
   const filteredFoodBookings = useMemo(() => {
     return allBookings.filter(b => {
@@ -130,9 +181,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const addAgent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAgent.code.trim() || !newAgent.name.trim()) return;
-    await onUpsertAgent({ code: newAgent.code.trim().toUpperCase(), name: newAgent.name.trim() });
-    setNewAgent({ code: '', name: '' });
-    notify?.("Agent registered!", 'success');
+    await onUpsertAgent({
+      code: newAgent.code.trim().toUpperCase(),
+      name: newAgent.name.trim(),
+      phone: newAgent.phone.trim(),
+      mobile: newAgent.phone.trim()
+    });
+    setNewAgent({ code: '', name: '', phone: '' });
+    notify?.("Agent registered with phone number!", 'success');
   };
 
   const saveAgentEdit = async () => {
@@ -168,12 +224,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
    * Print 6 Tickets per A4 Sheet (2 Columns x 3 Rows)
    * A4 dimensions: 210mm x 297mm
    * Each ticket: 105mm x 99mm
+   * For combined bookings: Generates 1 single consolidated ticket with all seats and primary booker name!
    */
   const handlePrintBatch = () => {
     if (selectedForPrint.length === 0) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-    const bookingsToPrint = allBookings.filter(b => selectedForPrint.includes(b.id));
+    const ticketsToPrint = groupedTickets.filter(g => selectedForPrint.includes(g.id));
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -181,19 +238,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         <head>
           <title>6-Tickets per A4 - Tour লাগবে</title>
           <script src="https://cdn.tailwindcss.com"></script>
-          <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+          <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700;800&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
           <style>
             @page { 
               size: A4 portrait; 
               margin: 0; 
             }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              box-sizing: border-box;
+            }
             body { 
               font-family: 'Inter', 'Hind Siliguri', sans-serif; 
-              background: white; 
+              background: #ffffff; 
               margin: 0; 
               padding: 0; 
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
             }
             .page-container {
               width: 210mm;
@@ -208,83 +268,104 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               width: 105mm;
               height: 99mm;
               border: 0.5pt dashed #cbd5e1;
-              padding: 6mm 7mm;
+              padding: 5mm 6mm;
               box-sizing: border-box;
               display: flex;
               flex-direction: column;
               justify-content: space-between;
               overflow: hidden;
               position: relative;
+              background: #ffffff;
             }
           </style>
         </head>
         <body onload="window.print()">
-          ${Array.from({ length: Math.ceil(bookingsToPrint.length / 6) }).map((_, pageIdx) => {
-            const pageBookings = bookingsToPrint.slice(pageIdx * 6, (pageIdx + 1) * 6);
+          ${Array.from({ length: Math.ceil(ticketsToPrint.length / 6) }).map((_, pageIdx) => {
+            const pageTickets = ticketsToPrint.slice(pageIdx * 6, (pageIdx + 1) * 6);
             return `
               <div class="page-container">
-                ${pageBookings.map(info => {
-                  const qrData = `TOUR-LAGBE|TICKET:${info.id}|SEAT:${info.seatNo}|NAME:${info.name}|PHONE:${info.mobile}`;
-                  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(qrData)}`;
+                ${pageTickets.map(g => {
+                  const info = g.leadBooking;
+                  const seatDisplay = g.seatsList.join(', ');
+                  const qrData = `TOUR-LAGBE|TICKET:${g.id}|SEATS:${seatDisplay}|PRIMARY:${info.name}|PHONE:${info.mobile}`;
+                  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(qrData)}`;
                   
                   return `
                     <div class="ticket-card">
                       <!-- Ticket Header -->
-                      <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                      <div class="flex justify-between items-center border-b border-gray-200 pb-2">
                         <div class="flex items-center gap-2">
                           <img src="${BUSINESS_INFO.logo}" class="h-8 object-contain" />
                           <div>
-                            <h1 class="font-black text-xs text-[#001D4A] tracking-tight leading-tight">${BUSINESS_INFO.name}</h1>
-                            <p class="text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none">Official Boarding Pass</p>
+                            <h1 class="font-black text-sm text-[#001D4A] tracking-tight leading-tight">${BUSINESS_INFO.name}</h1>
+                            <p class="text-[8px] font-black text-orange-600 uppercase tracking-wider leading-none mt-0.5">
+                              ${g.totalSeats > 1 ? `★ Combined Pass (${g.totalSeats} Seats)` : '★ Official Boarding Pass'}
+                            </p>
                           </div>
                         </div>
-                        <div class="bg-[#001D4A] text-white px-3 py-1 rounded-xl flex flex-col items-center">
-                          <span class="text-[6px] font-black uppercase tracking-widest opacity-70 leading-none">Seat</span>
-                          <span class="text-lg font-black leading-none">${info.seatNo}</span>
+                        <div class="bg-[#001D4A] text-white px-3 py-1.5 rounded-xl flex flex-col items-center max-w-[46mm] shadow-sm">
+                          <span class="text-[7px] font-black uppercase tracking-widest opacity-80 leading-none mb-0.5">
+                            ${g.totalSeats > 1 ? `SEATS (${g.totalSeats})` : 'SEAT'}
+                          </span>
+                          <span class="text-base font-black leading-none truncate max-w-full text-amber-300">${seatDisplay}</span>
                         </div>
                       </div>
 
                       <!-- Tour & Passenger Info -->
-                      <div class="grid grid-cols-3 gap-2 my-1">
-                        <div class="col-span-2 space-y-1">
+                      <div class="grid grid-cols-12 gap-2 my-auto py-1">
+                        <div class="col-span-8 space-y-1.5">
                           <div>
-                            <p class="text-[6px] font-black uppercase text-gray-400 leading-none">Passenger Name</p>
-                            <p class="text-[11px] font-black text-gray-900 truncate leading-tight">${info.name}</p>
-                            <p class="text-[7px] font-bold text-gray-500">${info.gender || 'MALE'} • ${info.religion || 'Muslim'} • +880${info.mobile}</p>
+                            <p class="text-[7px] font-black uppercase text-gray-400 tracking-wider leading-none">Primary Passenger</p>
+                            <p class="text-[14px] font-black text-gray-950 truncate leading-tight mt-0.5">${info.name}</p>
+                            <p class="text-[9px] font-bold text-gray-600 mt-0.5 flex items-center gap-1">
+                              <span>+880${info.mobile}</span>
+                              <span>•</span>
+                              <span>${info.gender || 'MALE'}</span>
+                              ${info.religion ? `<span>• ${info.religion}</span>` : ''}
+                            </p>
                           </div>
-                          <div>
-                            <p class="text-[6px] font-black uppercase text-gray-400 leading-none">Tour Route</p>
-                            <p class="text-[9px] font-black text-indigo-900 leading-tight">${info.tourName || info.busNo}</p>
+
+                          <div class="bg-indigo-50/70 p-1.5 rounded-lg border border-indigo-100/80">
+                            <p class="text-[7px] font-black uppercase text-indigo-500 tracking-wider leading-none">Tour Destination</p>
+                            <p class="text-[11px] font-black text-indigo-950 leading-tight truncate mt-0.5">${info.tourName || info.busNo}</p>
                           </div>
+
                           <div class="flex gap-4 pt-0.5">
-                            <div>
-                              <p class="text-[6px] font-black uppercase text-gray-400 leading-none">Paid</p>
-                              <p class="text-[10px] font-black text-emerald-600 leading-none">৳${(info.advanceAmount || 0).toLocaleString()}</p>
+                            <div class="bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200/60 flex-1">
+                              <p class="text-[7px] font-black uppercase text-emerald-700 leading-none">Total Paid</p>
+                              <p class="text-[12px] font-black text-emerald-700 leading-none mt-0.5">৳${g.totalAdvance.toLocaleString()}</p>
                             </div>
-                            <div>
-                              <p class="text-[6px] font-black uppercase text-gray-400 leading-none">Due</p>
-                              <p class="text-[10px] font-black text-rose-600 leading-none">৳${(info.dueAmount || 0).toLocaleString()}</p>
+                            <div class="bg-rose-50 px-2 py-1 rounded-md border border-rose-200/60 flex-1">
+                              <p class="text-[7px] font-black uppercase text-rose-700 leading-none">Total Due</p>
+                              <p class="text-[12px] font-black text-rose-700 leading-none mt-0.5">৳${g.totalDue.toLocaleString()}</p>
                             </div>
                           </div>
                         </div>
 
-                        <!-- QR Code -->
-                        <div class="col-span-1 flex flex-col items-center justify-center">
-                          <img src="${qrCodeUrl}" class="w-14 h-14 rounded border border-gray-100 p-0.5" />
-                          <p class="text-[6px] text-gray-400 font-black mt-0.5 uppercase tracking-widest">ID: ${info.id.slice(0, 6)}</p>
+                        <!-- QR Code & ID -->
+                        <div class="col-span-4 flex flex-col items-center justify-center pl-1 border-l border-dashed border-gray-200">
+                          <div class="p-1 bg-white rounded-lg border border-gray-200 shadow-sm">
+                            <img src="${qrCodeUrl}" class="w-16 h-16 object-contain" />
+                          </div>
+                          <p class="text-[8px] text-gray-600 font-black mt-1 uppercase tracking-wider">ID: ${g.id.slice(0, 8)}</p>
+                          <span class="text-[6px] font-bold text-gray-400">Scan for Verification</span>
                         </div>
                       </div>
 
                       <!-- Ticket Footer -->
                       <div class="flex justify-between items-center pt-1.5 border-t border-dashed border-gray-200">
-                        <div class="text-[6px] font-bold text-gray-400 leading-tight uppercase">
-                          <p>Agent: ${info.bookedBy || 'Admin'}</p>
-                          <p>Date: ${new Date(info.bookingDate).toLocaleDateString()}</p>
+                        <div class="text-[8px] font-bold text-gray-600 leading-snug">
+                          <p class="font-extrabold text-gray-900">
+                            Booker: <span class="text-indigo-900">${g.agentName}</span> ${g.agentPhone ? `<span class="text-gray-500 font-semibold">(+880${g.agentPhone})</span>` : ''}
+                          </p>
+                          <p class="text-[7px] text-gray-400 mt-0.5">Issue Date: ${new Date(info.bookingDate).toLocaleDateString()}</p>
                         </div>
-                        <span class="px-2.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider ${
-                          info.paymentStatus === 'Paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800'
+                        <span class="px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider ${
+                          g.totalDue <= 0 
+                            ? 'bg-emerald-600 text-white shadow-sm' 
+                            : 'bg-amber-500 text-white shadow-sm'
                         }">
-                          ${info.paymentStatus}
+                          ${g.totalDue <= 0 ? '✓ PAID FULL' : '⚠ PARTIAL DUE'}
                         </span>
                       </div>
                     </div>
@@ -317,19 +398,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         <head>
           <title>10-Tokens per A4 - Tour লাগবে</title>
           <script src="https://cdn.tailwindcss.com"></script>
-          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+          <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700;800&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
           <style>
             @page { 
               size: A4 portrait; 
               margin: 0; 
             }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              box-sizing: border-box;
+            }
             body { 
-              font-family: 'Inter', sans-serif; 
-              background: white; 
+              font-family: 'Inter', 'Hind Siliguri', sans-serif; 
+              background: #ffffff; 
               margin: 0; 
               padding: 0; 
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
             }
             .token-page { 
               width: 210mm; 
@@ -344,25 +428,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               width: 105mm;
               height: 59.4mm;
               border: 0.5pt dashed #cbd5e1; 
-              padding: 4mm 6mm; 
+              padding: 4.5mm 6mm; 
               display: flex; 
               flex-direction: column; 
               justify-content: space-between;
               position: relative;
               overflow: hidden;
               box-sizing: border-box;
+              background: #ffffff;
             }
             .token-watermark {
               position: absolute;
-              font-size: 28px;
+              font-size: 32px;
               font-weight: 900;
-              color: rgba(0,0,0,0.03);
+              color: rgba(249, 115, 22, 0.04);
               z-index: 0;
               pointer-events: none;
               white-space: nowrap;
               top: 50%;
               left: 50%;
-              transform: translate(-50%, -50%) rotate(-10deg);
+              transform: translate(-50%, -50%) rotate(-8deg);
+              letter-spacing: 2px;
             }
           </style>
         </head>
@@ -373,39 +459,42 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               <div class="token-page">
                 ${pageBookings.map(info => `
                   <div class="token-card">
-                    <div class="token-watermark">${foodType.toUpperCase()}</div>
+                    <div class="token-watermark">🍽️ ${foodType.toUpperCase()}</div>
                     
                     <!-- Token Header -->
-                    <div class="relative z-10 flex justify-between items-center border-b border-gray-100 pb-1">
+                    <div class="relative z-10 flex justify-between items-center border-b border-gray-200 pb-1.5">
                       <div class="flex items-center gap-2">
-                        <img src="${BUSINESS_INFO.logo}" class="h-6" />
+                        <img src="${BUSINESS_INFO.logo}" class="h-6 object-contain" />
                         <div>
-                          <span class="text-[9px] font-black text-[#001D4A] uppercase tracking-wide leading-none block">${BUSINESS_INFO.name}</span>
-                          <span class="text-[7px] font-black text-orange-500 uppercase tracking-widest leading-none">${foodType} Token</span>
+                          <span class="text-[10px] font-black text-[#001D4A] uppercase tracking-tight leading-none block">${BUSINESS_INFO.name}</span>
+                          <span class="text-[8px] font-black text-orange-600 uppercase tracking-wider leading-none mt-0.5 block">🍽️ ${foodType} Token</span>
                         </div>
                       </div>
-                      <div class="bg-[#001D4A] text-white px-2.5 py-0.5 rounded-lg flex items-center gap-1">
-                        <span class="text-[6px] font-black uppercase opacity-60">Seat</span>
-                        <span class="text-xs font-black">${info.seatNo}</span>
+                      <div class="bg-[#001D4A] text-white px-3 py-1 rounded-xl flex items-center gap-1.5 shadow-sm">
+                        <span class="text-[7px] font-black uppercase opacity-75 leading-none">SEAT</span>
+                        <span class="text-sm font-black leading-none text-amber-300">${info.seatNo}</span>
                       </div>
                     </div>
 
                     <!-- Passenger & Meal Info -->
                     <div class="relative z-10 flex justify-between items-center py-1">
-                      <div class="max-w-[140px]">
-                        <p class="text-[10px] font-black text-gray-900 truncate leading-tight">${info.name}</p>
-                        <p class="text-[7px] font-bold text-gray-500">${info.tourName || info.busNo}</p>
+                      <div class="max-w-[155px]">
+                        <p class="text-[12px] font-black text-gray-950 truncate leading-tight">${info.name}</p>
+                        <p class="text-[8px] font-extrabold text-indigo-900 mt-0.5 truncate">${info.tourName || info.busNo}</p>
                       </div>
-                      <div class="text-right">
-                        <span class="text-[6px] font-black text-gray-400 uppercase block">Serving Time</span>
-                        <span class="text-[10px] font-black text-orange-600 leading-none">${foodTime}</span>
+                      <div class="text-right bg-orange-50/80 px-2 py-1 rounded-lg border border-orange-200/60">
+                        <span class="text-[7px] font-black text-orange-600 uppercase block leading-none">Serving Time</span>
+                        <span class="text-[11px] font-black text-orange-700 leading-none mt-0.5 block">${foodTime}</span>
                       </div>
                     </div>
 
                     <!-- Token Footer / Menu -->
                     <div class="relative z-10 flex justify-between items-center pt-1 border-t border-dashed border-gray-200">
-                      <p class="text-[7px] font-medium text-gray-500 truncate max-w-[180px]">Menu: ${foodMenu}</p>
-                      <span class="text-[6px] font-black text-gray-400 uppercase">Valid for 1 Person</span>
+                      <div class="truncate max-w-[185px]">
+                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Menu:</span>
+                        <span class="text-[8px] font-bold text-gray-700">${foodMenu}</span>
+                      </div>
+                      <span class="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[7px] font-black uppercase">1 Person</span>
                     </div>
                   </div>
                 `).join('')}
@@ -494,18 +583,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="grid grid-cols-4 md:flex md:flex-wrap bg-white p-1.5 rounded-[28px] shadow-sm mb-8 gap-1.5 border border-gray-100">
+      {/* Navigation Tabs - Mobile Optimized Horizontal Scroll / Wrap */}
+      <div className="flex overflow-x-auto no-scrollbar md:flex-wrap bg-white p-1.5 rounded-[24px] sm:rounded-[28px] shadow-sm mb-6 md:mb-8 gap-1.5 border border-gray-100 -mx-1 px-2 sm:mx-0">
         {navTabs.map(tab => (
           <button 
             key={tab.id} 
             onClick={() => setActiveSubTab(tab.id as any)} 
-            className={`flex flex-col md:flex-row items-center justify-center gap-1.5 md:gap-2 px-2 py-3 md:px-5 md:py-3.5 rounded-[20px] transition-all uppercase ${
-              activeSubTab === tab.id ? 'bg-[#001D4A] text-white shadow-lg' : 'text-gray-400 hover:text-gray-700'
+            className={`flex items-center justify-center shrink-0 gap-1.5 md:gap-2 px-3.5 py-2.5 sm:px-4 sm:py-3 md:px-5 md:py-3.5 rounded-[18px] sm:rounded-[20px] transition-all uppercase active:scale-95 ${
+              activeSubTab === tab.id ? 'bg-[#001D4A] text-white shadow-lg' : 'text-gray-500 hover:text-gray-800 bg-gray-50/60 md:bg-transparent'
             }`}
           >
-            <i className={`fas ${tab.icon} text-sm md:text-xs`}></i>
-            <span className="font-black text-[8px] md:text-[10px] tracking-tight">{tab.label}</span>
+            <i className={`fas ${tab.icon} text-xs`}></i>
+            <span className="font-black text-[9px] sm:text-[10px] whitespace-nowrap">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -713,12 +802,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       {activeSubTab === 'agents' && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <form onSubmit={addAgent} className="bg-white p-6 md:p-8 rounded-[32px] shadow-sm border flex flex-col gap-5">
-            <h4 className="font-black text-[10px] uppercase text-[#001D4A] tracking-widest border-l-4 border-indigo-500 pl-3">Register Agent</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1"><label className="text-[9px] font-black uppercase text-gray-400">ID Code</label><input required className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-black uppercase text-sm tracking-widest" placeholder="KS101" value={newAgent.code} onChange={e => setNewAgent({...newAgent, code: e.target.value.toUpperCase()})} /></div>
-              <div className="space-y-1"><label className="text-[9px] font-black uppercase text-gray-400">Full Name</label><input required className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-sm" placeholder="Kazi Shetu" value={newAgent.name} onChange={e => setNewAgent({...newAgent, name: e.target.value})} /></div>
+            <h4 className="font-black text-[10px] uppercase text-[#001D4A] tracking-widest border-l-4 border-indigo-500 pl-3">Register Agent (নাম ও ফোন নম্বর)</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-gray-400">ID Code</label>
+                <input required className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-black uppercase text-sm tracking-widest" placeholder="KS101" value={newAgent.code} onChange={e => setNewAgent({...newAgent, code: e.target.value.toUpperCase()})} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-gray-400">Full Name</label>
+                <input required className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-sm" placeholder="Kazi Shetu" value={newAgent.name} onChange={e => setNewAgent({...newAgent, name: e.target.value})} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-gray-400">Mobile / Phone Number</label>
+                <input required className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-sm" placeholder="017XXXXXXXX" value={newAgent.phone} onChange={e => setNewAgent({...newAgent, phone: e.target.value})} />
+              </div>
             </div>
-            <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg uppercase text-xs tracking-widest active:scale-95 transition-all">Add Booker</button>
+            <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg uppercase text-xs tracking-widest active:scale-95 transition-all">Add Agent</button>
           </form>
 
           <div className="space-y-3">
@@ -726,14 +825,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               <div key={i} className="bg-white p-5 rounded-[28px] border border-gray-100 shadow-sm flex items-center justify-between">
                 <div className="flex-grow">
                   {editAgentIndex === i ? (
-                    <div className="flex gap-2">
-                      <input className="px-3 py-2 border rounded-xl w-24 text-xs font-black uppercase" value={editAgentData?.code || ''} onChange={e => setEditAgentData({...editAgentData!, code: e.target.value.toUpperCase()})} />
-                      <input className="px-3 py-2 border rounded-xl w-full text-xs font-bold" value={editAgentData?.name || ''} onChange={e => setEditAgentData({...editAgentData!, name: e.target.value})} />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input className="px-3 py-2 border rounded-xl text-xs font-black uppercase" value={editAgentData?.code || ''} onChange={e => setEditAgentData({...editAgentData!, code: e.target.value.toUpperCase()})} placeholder="Code" />
+                      <input className="px-3 py-2 border rounded-xl text-xs font-bold" value={editAgentData?.name || ''} onChange={e => setEditAgentData({...editAgentData!, name: e.target.value})} placeholder="Name" />
+                      <input className="px-3 py-2 border rounded-xl text-xs font-bold" value={editAgentData?.mobile || editAgentData?.phone || ''} onChange={e => setEditAgentData({...editAgentData!, mobile: e.target.value, phone: e.target.value})} placeholder="Phone" />
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3">
-                      <p className="font-black text-[10px] text-gray-400 uppercase tracking-widest">{a.code}</p>
-                      <p className="font-bold text-gray-800 text-sm">{a.name}</p>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="font-black text-[10px] text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl uppercase tracking-widest">{a.code}</span>
+                      <p className="font-bold text-gray-900 text-sm">{a.name}</p>
+                      {(a.mobile || a.phone) && (
+                        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+                          <i className="fas fa-phone-alt text-[9px]"></i> +880{a.mobile || a.phone}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -856,18 +961,35 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             {filteredPrintBookings.length === 0 ? (
               <div className="bg-white py-12 text-center rounded-[32px] border border-dashed border-gray-100"><p className="text-gray-400 font-black uppercase text-[10px] tracking-widest">No Matching Bookings</p></div>
             ) : (
-              filteredPrintBookings.map((b) => (
-                <div key={b.id} onClick={() => setSelectedForPrint(prev => prev.includes(b.id) ? prev.filter(p => p !== b.id) : [...prev, b.id])} className={`bg-white p-5 rounded-[28px] border transition-all cursor-pointer flex items-center justify-between ${selectedForPrint.includes(b.id) ? 'border-indigo-600 bg-indigo-50 shadow-md' : 'border-gray-100 shadow-sm'}`}>
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all ${selectedForPrint.includes(b.id) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-200 text-transparent'}`}><i className="fas fa-check text-[10px]"></i></div>
-                    <div>
-                      <p className="font-black text-[#001D4A] text-sm truncate max-w-[200px]">{b.name}</p>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Seat {b.seatNo} • {b.tourName || b.busNo} • {b.gender || 'M'} • {b.religion || 'Muslim'}</p>
+              filteredPrintBookings.map((g) => {
+                const b = g.leadBooking;
+                const isSelected = selectedForPrint.includes(g.id);
+                return (
+                  <div key={g.id} onClick={() => setSelectedForPrint(prev => prev.includes(g.id) ? prev.filter(p => p !== g.id) : [...prev, g.id])} className={`bg-white p-5 rounded-[28px] border transition-all cursor-pointer flex items-center justify-between ${isSelected ? 'border-indigo-600 bg-indigo-50 shadow-md' : 'border-gray-100 shadow-sm'}`}>
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-200 text-transparent'}`}><i className="fas fa-check text-[10px]"></i></div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-black text-[#001D4A] text-sm truncate max-w-[220px]">{b.name}</p>
+                          {g.totalSeats > 1 && (
+                            <span className="text-[9px] font-black text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md uppercase">
+                              Combined ({g.totalSeats} Seats)
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter mt-0.5">
+                          Seats: <span className="text-indigo-900 font-black">{g.seatsList.join(', ')}</span> • {b.tourName || b.busNo} • Agent: {g.agentName} {g.agentPhone ? `(+880${g.agentPhone})` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${g.totalDue <= 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {g.totalDue <= 0 ? 'Paid' : `Due: ৳${g.totalDue}`}
+                      </span>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${b.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{b.paymentStatus}</span>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

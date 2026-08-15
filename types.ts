@@ -106,6 +106,8 @@ export interface Tour {
 export interface Booker {
   code: string;
   name: string;
+  phone?: string;
+  mobile?: string;
   last_active?: string;
 }
 
@@ -153,3 +155,12 @@ export interface Hotel {
   contactNumber?: string;
   address?: string;
 }
+
+export interface Notice {
+  id: string | number;
+  content: string;
+  type?: 'success' | 'error' | 'info' | string;
+  is_active?: boolean;
+  created_at?: string;
+}
+

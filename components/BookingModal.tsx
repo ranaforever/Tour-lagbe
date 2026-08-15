@@ -537,7 +537,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Discount (ছাড়)</label>
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Discount (ছাড় ৳)</label>
                       <input 
                         type="number" 
                         inputMode="numeric" 
@@ -549,30 +549,79 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Advance (অগ্রিম)</label>
+                      <label className="text-[9px] font-black text-emerald-600 uppercase tracking-widest ml-1">Advance (অগ্রিম ৳)</label>
                       <input 
                         type="number" 
                         inputMode="numeric" 
                         name="advanceAmount" 
                         value={primaryData.advanceAmount || ''} 
                         onChange={handleNumericChange} 
-                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl font-black text-sm text-green-700 outline-none" 
+                        className="w-full px-4 py-3 bg-white border border-emerald-300 rounded-2xl font-black text-sm text-emerald-700 outline-none focus:ring-2 focus:ring-emerald-400" 
                         placeholder="0"
                       />
                     </div>
                   </div>
 
-                  {/* Net Due Box */}
-                  <div className="p-4 bg-[#001D4A] rounded-2xl text-white flex justify-between items-center shadow-lg">
-                    <div>
-                      <span className="text-[9px] font-black text-orange-400 uppercase tracking-[0.2em] block">
-                        Net Due (বকেয়া)
-                      </span>
-                      <span className="text-[10px] text-gray-300 font-bold">
-                        মোট: ৳{totalGross.toLocaleString()}
+                  {/* Quick Payment Preset Buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const netPayable = Math.max(0, totalGross - (primaryData.discountAmount || 0));
+                        setPrimaryData(prev => ({ ...prev, advanceAmount: netPayable }));
+                      }}
+                      className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1"
+                    >
+                      <i className="fas fa-check-circle text-[9px]"></i> Paid Full (সম্পূর্ণ পেইড)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const netPayable = Math.max(0, totalGross - (primaryData.discountAmount || 0));
+                        setPrimaryData(prev => ({ ...prev, advanceAmount: Math.round(netPayable / 2) }));
+                      }}
+                      className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[10px] font-black uppercase transition-all"
+                    >
+                      50% Advance
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrimaryData(prev => ({ ...prev, advanceAmount: 0 }));
+                      }}
+                      className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-[10px] font-black uppercase transition-all"
+                    >
+                      Full Due (সম্পূর্ণ বাকি)
+                    </button>
+                  </div>
+
+                  {/* Payment Status & Net Due Summary Box */}
+                  <div className="p-4 bg-[#001D4A] rounded-2xl text-white shadow-lg space-y-2">
+                    <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                      <div>
+                        <span className="text-[8px] font-black text-emerald-400 uppercase tracking-wider block">
+                          Total Advance Paid (পরিশোধিত)
+                        </span>
+                        <span className="text-base font-black text-emerald-400">
+                          ৳{(primaryData.advanceAmount || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[8px] font-black text-orange-400 uppercase tracking-wider block">
+                          Net Due (বকেয়া)
+                        </span>
+                        <span className="text-xl font-black text-amber-300">
+                          ৳{dueAmount.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center text-[10px] text-gray-300 font-bold pt-0.5">
+                      <span>মোট গ্রস বিল: ৳{totalGross.toLocaleString()}</span>
+                      <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${dueAmount <= 0 ? 'bg-emerald-500 text-white' : (primaryData.advanceAmount > 0 ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white')}`}>
+                        {dueAmount <= 0 ? 'Paid' : (primaryData.advanceAmount > 0 ? 'Partial' : 'Unpaid')}
                       </span>
                     </div>
-                    <span className="text-xl font-black text-white">৳{dueAmount.toLocaleString()}</span>
                   </div>
 
                   {/* Agent Code */}

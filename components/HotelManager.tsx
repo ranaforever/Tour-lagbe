@@ -45,7 +45,23 @@ const HotelManager: React.FC<HotelManagerProps> = ({
   onUnassignPassenger,
   notify
 }) => {
-  const [selectedTourName, setSelectedTourName] = useState<string>(tours[0]?.name || '');
+  // Only Relax Tours are eligible for Hotel & Room Allocation
+  const relaxTours = useMemo(() => {
+    return tours.filter(t => t.tour_type === 'Relax' || t.tour_type?.toLowerCase().includes('relax'));
+  }, [tours]);
+
+  const [selectedTourName, setSelectedTourName] = useState<string>(() => {
+    const firstRelax = tours.find(t => t.tour_type === 'Relax' || t.tour_type?.toLowerCase().includes('relax'));
+    return firstRelax?.name || '';
+  });
+
+  // Keep selected tour in sync if relaxTours update
+  React.useEffect(() => {
+    if (relaxTours.length > 0 && (!selectedTourName || !relaxTours.some(t => t.name === selectedTourName))) {
+      setSelectedTourName(relaxTours[0].name);
+    }
+  }, [relaxTours, selectedTourName]);
+
   const [activeSubTab, setActiveSubTab] = useState<'allocation' | 'hotels' | 'print'>('allocation');
 
   // Form & Edit Modals states
@@ -78,10 +94,13 @@ const HotelManager: React.FC<HotelManagerProps> = ({
     hotelId: ''
   });
 
-  // Filter bookings for current tour
+  // Filter bookings for current Relax tour only (Day Long tours excluded)
   const tourBookings = useMemo(() => {
+    if (!selectedTourName) return [];
+    const isRelax = relaxTours.some(t => t.name === selectedTourName);
+    if (!isRelax) return [];
     return allBookings.filter(b => b.busNo === selectedTourName || b.tourName === selectedTourName);
-  }, [allBookings, selectedTourName]);
+  }, [allBookings, selectedTourName, relaxTours]);
 
   // Filter rooms for current tour
   const tourRooms = useMemo(() => {
@@ -232,23 +251,30 @@ const HotelManager: React.FC<HotelManagerProps> = ({
           </p>
         </div>
 
-        {/* Tour Filter & Print Buttons */}
+        {/* Relax Tour Filter & Print Buttons */}
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <select
-            value={selectedTourName}
-            onChange={(e) => setSelectedTourName(e.target.value)}
-            className="px-4 py-3.5 bg-indigo-50 border-none rounded-2xl font-black text-indigo-700 text-xs uppercase outline-none shadow-sm cursor-pointer"
-          >
-            {tours.map(t => (
-              <option key={t.name} value={t.name}>
-                {t.name} ({t.tour_type || 'Day Long'})
-              </option>
-            ))}
-          </select>
+          {relaxTours.length > 0 ? (
+            <select
+              value={selectedTourName}
+              onChange={(e) => setSelectedTourName(e.target.value)}
+              className="px-4 py-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl font-black text-emerald-800 text-xs uppercase outline-none shadow-sm cursor-pointer"
+            >
+              {relaxTours.map(t => (
+                <option key={t.name} value={t.name}>
+                  🏝️ {t.name} (Relax Tour)
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="px-4 py-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-2xl text-xs font-black">
+              ⚠️ কোনো Relax Tour নেই (Day Long ট্যুরে প্রযোজ্য নয়)
+            </span>
+          )}
 
           <button
             onClick={() => setActiveSubTab('print')}
-            className="px-5 py-3.5 bg-[#001D4A] text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md hover:bg-opacity-90 active:scale-95 transition-all flex items-center gap-2"
+            disabled={relaxTours.length === 0}
+            className="px-5 py-3.5 bg-[#001D4A] text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md hover:bg-opacity-90 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-40"
           >
             <i className="fas fa-print"></i>
             <span>রুম চার্ট প্রিন্ট (Print)</span>
@@ -256,30 +282,40 @@ const HotelManager: React.FC<HotelManagerProps> = ({
         </div>
       </div>
 
+      {relaxTours.length === 0 && (
+        <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[28px] text-center">
+          <i className="fas fa-umbrella-beach text-3xl text-amber-500 mb-2"></i>
+          <h4 className="font-black text-[#001D4A] text-base">হোটেল ও রুম ম্যানেজমেন্ট শুধুমাত্র Relax Tour-এর জন্য প্রযোজ্য</h4>
+          <p className="text-gray-600 text-xs font-medium mt-1">
+            ডে লং (Day Long) ট্যুরে কোনো হোটেল বরাদ্দের প্রয়োজন নেই। অ্যাডমিন প্যানেল থেকে ট্যুর টাইপ 'Relax Tour' সেট করলে এখানে রুম তৈরি ও যাত্রী বরাদ্দ করা যাবে।
+          </p>
+        </div>
+      )}
+
       {/* Navigation Sub-Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 pb-2">
+      <div className="flex flex-wrap sm:flex-nowrap gap-2 border-b border-gray-200 pb-2">
         <button
           onClick={() => setActiveSubTab('allocation')}
-          className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
+          className={`flex-1 sm:flex-initial px-4 sm:px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-95 ${
             activeSubTab === 'allocation'
               ? 'bg-[#001D4A] text-white shadow-md'
               : 'bg-white text-gray-500 hover:bg-gray-100'
           }`}
         >
           <i className="fas fa-bed"></i>
-          <span>রুম অ্যালটমেন্ট (Room Allocation Board)</span>
+          <span>রুম অ্যালটমেন্ট (Allocation)</span>
         </button>
 
         <button
           onClick={() => setActiveSubTab('hotels')}
-          className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
+          className={`flex-1 sm:flex-initial px-4 sm:px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-95 ${
             activeSubTab === 'hotels'
               ? 'bg-[#001D4A] text-white shadow-md'
               : 'bg-white text-gray-500 hover:bg-gray-100'
           }`}
         >
           <i className="fas fa-building"></i>
-          <span>হোটেল ও রুম তালিকা (Hotels & Rooms)</span>
+          <span>হোটেল ও রুম তালিকা (Hotels)</span>
         </button>
       </div>
 

@@ -13,6 +13,7 @@ import SeatDetailModal from './components/SeatDetailModal';
 import ExpenseTracker from './components/ExpenseTracker';
 import RevenueReport from './components/RevenueReport';
 import HotelManager from './components/HotelManager';
+import { NotificationCenter } from './components/NotificationCenter';
 import { supabase } from './supabase';
 
 const App: React.FC = () => {
@@ -74,6 +75,13 @@ const App: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [onlineAgents, setOnlineAgents] = useState<Booker[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [readNotificationIds, setReadNotificationIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('tl_read_notification_ids') || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   // Get active layout for currently selected tour
   const currentTourName = tours[selectedBusIndex]?.name || '';
@@ -113,7 +121,58 @@ const App: React.FC = () => {
       const fetchedTypes = (typesRes.data || []).sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
       const fetchedBookings: any[] = bookingsRes.data || [];
       const fetchedLocks: any[] = locksRes.data || [];
-      const fetchedNotices: any[] = (noticesRes.data || []).filter((n: any) => n.is_active !== false);
+      const allRawNotices: any[] = noticesRes.data || [];
+      const fetchedNotices: any[] = allRawNotices.filter((n: any) => n.is_active !== false && !String(n.id || '').startsWith('cfg_'));
+
+      // Sync Cloud Configurations (Bus Layouts, Hotels, Rooms) across all devices
+      let currentBusLayout = busLayout;
+      let currentTourLayouts = busLayoutsByTour;
+
+      const layoutNotice = allRawNotices.find((n: any) => n.id === 'cfg_bus_layout');
+      if (layoutNotice?.content) {
+        try {
+          const parsed = JSON.parse(layoutNotice.content);
+          if (parsed && typeof parsed.rows === 'number') {
+            currentBusLayout = parsed;
+            setBusLayout(parsed);
+            localStorage.setItem('tl_bus_layout', layoutNotice.content);
+          }
+        } catch (e) {}
+      }
+
+      const tourLayoutsNotice = allRawNotices.find((n: any) => n.id === 'cfg_bus_layouts_by_tour');
+      if (tourLayoutsNotice?.content) {
+        try {
+          const parsed = JSON.parse(tourLayoutsNotice.content);
+          if (parsed && typeof parsed === 'object') {
+            currentTourLayouts = parsed;
+            setBusLayoutsByTour(parsed);
+            localStorage.setItem('tl_bus_layouts_by_tour', tourLayoutsNotice.content);
+          }
+        } catch (e) {}
+      }
+
+      const hotelsNotice = allRawNotices.find((n: any) => n.id === 'cfg_hotels');
+      if (hotelsNotice?.content) {
+        try {
+          const parsed = JSON.parse(hotelsNotice.content);
+          if (Array.isArray(parsed)) {
+            setHotels(parsed);
+            localStorage.setItem('tl_hotels', hotelsNotice.content);
+          }
+        } catch (e) {}
+      }
+
+      const roomsNotice = allRawNotices.find((n: any) => n.id === 'cfg_rooms');
+      if (roomsNotice?.content) {
+        try {
+          const parsed = JSON.parse(roomsNotice.content);
+          if (Array.isArray(parsed)) {
+            setRooms(parsed);
+            localStorage.setItem('tl_hotel_rooms', roomsNotice.content);
+          }
+        } catch (e) {}
+      }
 
       const now = new Date();
       const validLocks: SeatLock[] = fetchedLocks.filter(lock => new Date(lock.expires_at) > now);
@@ -125,6 +184,19 @@ const App: React.FC = () => {
 
       // Group & Room local metadata fallback
       const groupMeta: Record<string, any> = JSON.parse(localStorage.getItem('tl_booking_meta') || '{}');
+
+      const parseSeatsList = (raw: any): string[] | undefined => {
+        if (!raw) return undefined;
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === 'string') {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+          } catch (e) {}
+          return raw.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        return undefined;
+      };
 
       const mappedBookings: BookingInfo[] = fetchedBookings.map(b => {
         const meta = groupMeta[b.id] || {};
@@ -151,7 +223,7 @@ const App: React.FC = () => {
           isPrimary: b.is_primary !== undefined ? b.is_primary : (meta.isPrimary ?? true),
           primaryBookingId: b.primary_booking_id || meta.primaryBookingId,
           totalGroupSeats: b.total_group_seats || meta.totalGroupSeats || 1,
-          groupSeatsList: b.group_seats_list || meta.groupSeatsList,
+          groupSeatsList: parseSeatsList(b.group_seats_list) || parseSeatsList(meta.groupSeatsList),
           hotelRoomNo: b.hotel_room_no || meta.hotelRoomNo,
           hotelName: b.hotel_name || meta.hotelName
         };
@@ -166,7 +238,7 @@ const App: React.FC = () => {
       })));
 
       const busLayouts = fetchedTours.map(t => {
-        const layoutToUse = busLayoutsByTour[t.name] || busLayout;
+        const layoutToUse = currentTourLayouts[t.name] || currentBusLayout;
         const seats = generateSeatsFromLayout(layoutToUse);
         mappedBookings.forEach(booking => {
           if (booking.busNo === t.name || booking.tourName === t.name) {
@@ -395,6 +467,23 @@ const App: React.FC = () => {
 
       fetchData();
       notify(`Booking successful for ${bookings.length} seat(s)!`, 'success');
+
+      // Broadcast notification to all agents for new/updated booking
+      try {
+        const leadName = bookings[0]?.name || 'Passenger';
+        const busName = bookings[0]?.tourName || bookings[0]?.busNo || 'Tour';
+        const totalSeats = bookings.length;
+        const agentName = bookings[0]?.bookedBy || 'Agent';
+        const seatStr = bookings.map(b => b.seatNo).join(', ');
+
+        await supabase.from('tl_notices').insert({
+          content: `📢 [নতুন বুকিং] ${agentName} বুক করেছেন ${leadName}-এর ${totalSeats}টি সিট (${seatStr}) [${busName}]`,
+          type: 'success',
+          is_active: true
+        });
+      } catch (err) {
+        console.warn("Notice broadcast error:", err);
+      }
     } catch (error) {
       console.error(error);
       notify("Booking failed to save.", 'error');
@@ -416,6 +505,17 @@ const App: React.FC = () => {
       if (error) throw error;
       fetchData();
       notify("Booking removed.", 'success');
+
+      // Broadcast notification to all agents for deleted booking
+      try {
+        await supabase.from('tl_notices').insert({
+          content: `🗑️ [বুকিং বাতিল] এডমিন সিট ${seatId} (${busId}) বুকিং বাতিল করেছেন। সিটটি এখন খালি।`,
+          type: 'error',
+          is_active: true
+        });
+      } catch (err) {
+        console.warn("Notice broadcast error:", err);
+      }
     } catch (error) {
       notify("Delete failed.", 'error');
     }
@@ -428,26 +528,53 @@ const App: React.FC = () => {
       if (error) throw error;
       fetchData();
       notify(`Deleted ${ids.length} bookings.`, 'success');
+
+      // Broadcast notification to all agents for bulk deleted booking
+      try {
+        await supabase.from('tl_notices').insert({
+          content: `🗑️ [বুকিং রিমুভ] এডমিন ${ids.length}টি সিটের বুকিং ডাটা মুছে ফেলেছেন।`,
+          type: 'error',
+          is_active: true
+        });
+      } catch (err) {
+        console.warn("Notice broadcast error:", err);
+      }
     } catch (error) {
       notify("Bulk delete failed.", 'error');
     }
   };
 
-  // Bus Layout Customizer Handler
-  const handleSaveBusLayout = (layout: BusCustomLayout, applyToTour?: string) => {
-    if (applyToTour) {
-      const updatedTourLayouts = { ...busLayoutsByTour, [applyToTour]: layout };
-      setBusLayoutsByTour(updatedTourLayouts);
-      localStorage.setItem('tl_bus_layouts_by_tour', JSON.stringify(updatedTourLayouts));
-    } else {
-      setBusLayout(layout);
-      localStorage.setItem('tl_bus_layout', JSON.stringify(layout));
+  // Bus Layout Customizer Handler with Cloud Sync
+  const handleSaveBusLayout = async (layout: BusCustomLayout, applyToTour?: string) => {
+    try {
+      if (applyToTour) {
+        const updatedTourLayouts = { ...busLayoutsByTour, [applyToTour]: layout };
+        setBusLayoutsByTour(updatedTourLayouts);
+        localStorage.setItem('tl_bus_layouts_by_tour', JSON.stringify(updatedTourLayouts));
+        await supabase.from('tl_notices').upsert({
+          id: 'cfg_bus_layouts_by_tour',
+          title: 'Config Tour Layouts',
+          content: JSON.stringify(updatedTourLayouts),
+          is_active: false
+        });
+      } else {
+        setBusLayout(layout);
+        localStorage.setItem('tl_bus_layout', JSON.stringify(layout));
+        await supabase.from('tl_notices').upsert({
+          id: 'cfg_bus_layout',
+          title: 'Config Bus Layout',
+          content: JSON.stringify(layout),
+          is_active: false
+        });
+      }
+    } catch (e) {
+      console.error("Layout sync error:", e);
     }
     fetchData();
   };
 
-  // Hotel & Room Management Handlers
-  const handleAddHotel = (hotel: Hotel) => {
+  // Hotel & Room Management Handlers with Cloud Sync
+  const handleAddHotel = async (hotel: Hotel) => {
     if (!isAdminAuthenticated) {
       notify("Only admin can create hotels.", 'error');
       return;
@@ -455,9 +582,17 @@ const App: React.FC = () => {
     const updated = [...hotels, hotel];
     setHotels(updated);
     localStorage.setItem('tl_hotels', JSON.stringify(updated));
+    try {
+      await supabase.from('tl_notices').upsert({
+        id: 'cfg_hotels',
+        title: 'Config Hotels',
+        content: JSON.stringify(updated),
+        is_active: false
+      });
+    } catch (e) {}
   };
 
-  const handleUpdateHotel = (hotel: Hotel) => {
+  const handleUpdateHotel = async (hotel: Hotel) => {
     if (!isAdminAuthenticated) {
       notify("Only admin can update hotels.", 'error');
       return;
@@ -465,9 +600,17 @@ const App: React.FC = () => {
     const updated = hotels.map(h => h.id === hotel.id ? hotel : h);
     setHotels(updated);
     localStorage.setItem('tl_hotels', JSON.stringify(updated));
+    try {
+      await supabase.from('tl_notices').upsert({
+        id: 'cfg_hotels',
+        title: 'Config Hotels',
+        content: JSON.stringify(updated),
+        is_active: false
+      });
+    } catch (e) {}
   };
 
-  const handleDeleteHotel = (hotelId: string) => {
+  const handleDeleteHotel = async (hotelId: string) => {
     if (!isAdminAuthenticated) {
       notify("Only admin can delete hotels.", 'error');
       return;
@@ -475,9 +618,17 @@ const App: React.FC = () => {
     const updated = hotels.filter(h => h.id !== hotelId);
     setHotels(updated);
     localStorage.setItem('tl_hotels', JSON.stringify(updated));
+    try {
+      await supabase.from('tl_notices').upsert({
+        id: 'cfg_hotels',
+        title: 'Config Hotels',
+        content: JSON.stringify(updated),
+        is_active: false
+      });
+    } catch (e) {}
   };
 
-  const handleAddRoom = (room: HotelRoom) => {
+  const handleAddRoom = async (room: HotelRoom) => {
     if (!isAdminAuthenticated) {
       notify("Only admin can create rooms.", 'error');
       return;
@@ -485,9 +636,17 @@ const App: React.FC = () => {
     const updated = [...rooms, room];
     setRooms(updated);
     localStorage.setItem('tl_hotel_rooms', JSON.stringify(updated));
+    try {
+      await supabase.from('tl_notices').upsert({
+        id: 'cfg_rooms',
+        title: 'Config Rooms',
+        content: JSON.stringify(updated),
+        is_active: false
+      });
+    } catch (e) {}
   };
 
-  const handleUpdateRoom = (room: HotelRoom) => {
+  const handleUpdateRoom = async (room: HotelRoom) => {
     if (!isAdminAuthenticated) {
       notify("Only admin can update rooms.", 'error');
       return;
@@ -495,9 +654,17 @@ const App: React.FC = () => {
     const updated = rooms.map(r => r.id === room.id ? room : r);
     setRooms(updated);
     localStorage.setItem('tl_hotel_rooms', JSON.stringify(updated));
+    try {
+      await supabase.from('tl_notices').upsert({
+        id: 'cfg_rooms',
+        title: 'Config Rooms',
+        content: JSON.stringify(updated),
+        is_active: false
+      });
+    } catch (e) {}
   };
 
-  const handleDeleteRoom = (roomId: string) => {
+  const handleDeleteRoom = async (roomId: string) => {
     if (!isAdminAuthenticated) {
       notify("Only admin can delete rooms.", 'error');
       return;
@@ -505,9 +672,17 @@ const App: React.FC = () => {
     const updated = rooms.filter(r => r.id !== roomId);
     setRooms(updated);
     localStorage.setItem('tl_hotel_rooms', JSON.stringify(updated));
+    try {
+      await supabase.from('tl_notices').upsert({
+        id: 'cfg_rooms',
+        title: 'Config Rooms',
+        content: JSON.stringify(updated),
+        is_active: false
+      });
+    } catch (e) {}
   };
 
-  const handleAssignPassenger = (roomId: string, bookingId: string) => {
+  const handleAssignPassenger = async (roomId: string, bookingId: string) => {
     const updatedRooms = rooms.map(r => {
       const currentAssigned = r.assignedBookingIds || [];
       if (r.id === roomId) {
@@ -522,10 +697,18 @@ const App: React.FC = () => {
     });
     setRooms(updatedRooms);
     localStorage.setItem('tl_hotel_rooms', JSON.stringify(updatedRooms));
+    try {
+      await supabase.from('tl_notices').upsert({
+        id: 'cfg_rooms',
+        title: 'Config Rooms',
+        content: JSON.stringify(updatedRooms),
+        is_active: false
+      });
+    } catch (e) {}
     notify("Passenger assigned to room!", 'success');
   };
 
-  const handleUnassignPassenger = (roomId: string, bookingId: string) => {
+  const handleUnassignPassenger = async (roomId: string, bookingId: string) => {
     const updatedRooms = rooms.map(r => {
       if (r.id === roomId) {
         return { ...r, assignedBookingIds: (r.assignedBookingIds || []).filter(id => id !== bookingId) };
@@ -534,7 +717,66 @@ const App: React.FC = () => {
     });
     setRooms(updatedRooms);
     localStorage.setItem('tl_hotel_rooms', JSON.stringify(updatedRooms));
+    try {
+      await supabase.from('tl_notices').upsert({
+        id: 'cfg_rooms',
+        title: 'Config Rooms',
+        content: JSON.stringify(updatedRooms),
+        is_active: false
+      });
+    } catch (e) {}
     notify("Passenger removed from room.", 'info');
+  };
+
+  // Notification Management Handlers (Mark Read, Clear, Batch)
+  const handleMarkNoticeAsRead = (id: string) => {
+    const idStr = String(id);
+    if (!readNotificationIds.includes(idStr)) {
+      const updated = [...readNotificationIds, idStr];
+      setReadNotificationIds(updated);
+      localStorage.setItem('tl_read_notification_ids', JSON.stringify(updated));
+    }
+  };
+
+  const handleMarkAllNoticesAsRead = () => {
+    const allIds = notifications.map(n => String(n.id));
+    const merged = Array.from(new Set([...readNotificationIds, ...allIds]));
+    setReadNotificationIds(merged);
+    localStorage.setItem('tl_read_notification_ids', JSON.stringify(merged));
+    notify("সব নোটিফিকেশন পড়া হয়েছে (Marked as read)!", 'success');
+  };
+
+  const handleClearNotice = async (id: string) => {
+    const idStr = String(id);
+    // Optimistic UI update
+    setNotifications(prev => prev.filter(n => String(n.id) !== idStr));
+    
+    // Also remove from read set if present
+    const updatedRead = readNotificationIds.filter(rId => rId !== idStr);
+    setReadNotificationIds(updatedRead);
+    localStorage.setItem('tl_read_notification_ids', JSON.stringify(updatedRead));
+
+    try {
+      await supabase.from('tl_notices').delete().eq('id', id);
+    } catch (e) {
+      console.warn("Failed to delete notice from database:", e);
+    }
+  };
+
+  const handleClearAllNotices = async () => {
+    if (notifications.length === 0) return;
+    
+    const noticeIds = notifications.map(n => n.id);
+    setNotifications([]);
+    setReadNotificationIds([]);
+    localStorage.removeItem('tl_read_notification_ids');
+
+    try {
+      await supabase.from('tl_notices').delete().in('id', noticeIds);
+      notify("সকল নোটিফিকেশন ক্লিয়ার করা হয়েছে!", 'info');
+    } catch (e) {
+      console.warn("Failed to batch delete notices:", e);
+    }
   };
 
   // Admin Master Data Handlers
@@ -577,10 +819,21 @@ const App: React.FC = () => {
 
   const handleAgentUpsert = async (agent: Booker) => {
     try {
-      const { error } = await supabase.from('tl_agents').upsert({ code: agent.code, name: agent.name }, { onConflict: 'code' });
+      const fullPayload = { 
+        code: agent.code, 
+        name: agent.name,
+        phone: agent.phone || agent.mobile || null,
+        mobile: agent.mobile || agent.phone || null
+      };
+      let { error } = await supabase.from('tl_agents').upsert(fullPayload, { onConflict: 'code' });
+      if (error && (error.code === 'PGRST204' || error.message?.includes('column') || error.message?.includes('schema cache'))) {
+        const basePayload = { code: agent.code, name: agent.name };
+        const retry = await supabase.from('tl_agents').upsert(basePayload, { onConflict: 'code' });
+        error = retry.error;
+      }
       if (error) throw error;
       fetchData();
-      notify("Agent saved successfully!", 'success');
+      notify("Agent saved successfully with phone!", 'success');
     } catch (e) { notify("Failed to save agent.", 'error'); }
   };
 
@@ -808,7 +1061,7 @@ const App: React.FC = () => {
       </nav>
 
       <main className="flex-grow md:ml-24 p-4 md:p-10 pb-24 md:pb-10">
-        <header className="flex justify-between items-center mb-6 md:mb-10">
+        <header className="flex justify-between items-center mb-6 md:mb-8">
           <div className="flex items-center gap-3">
             <div className="md:hidden w-10 h-10 bg-white p-2 rounded-xl shadow-sm"><img src={BUSINESS_INFO.logo} className="w-full" /></div>
             <div>
@@ -823,35 +1076,90 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
-          <button onClick={() => setShowLogoutConfirm(true)} className="md:hidden w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center"><i className="fas fa-power-off"></i></button>
+          
+          {/* Header Right Actions: Notification Bell Center & Logout */}
+          <div className="flex items-center gap-3">
+            <NotificationCenter
+              notifications={notifications}
+              readIds={readNotificationIds}
+              onMarkAsRead={handleMarkNoticeAsRead}
+              onMarkAllAsRead={handleMarkAllNoticesAsRead}
+              onClearNotification={handleClearNotice}
+              onClearAllNotifications={handleClearAllNotices}
+            />
+
+            <button 
+              onClick={() => setShowLogoutConfirm(true)} 
+              className="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center transition-all border border-red-100 shadow-sm"
+              title="লগআউট"
+            >
+              <i className="fas fa-power-off text-base md:text-lg"></i>
+            </button>
+          </div>
         </header>
 
         <div className="max-w-7xl mx-auto">
-          {/* Notice Board */}
-          {notifications.length > 0 && (
-            <div className="mb-8 overflow-hidden">
-              <AnimatePresence mode="wait">
-                <motion.div 
-                  key={notifications[0].id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={`p-4 md:p-6 rounded-[32px] border border-white/20 flex items-center gap-4 relative overflow-hidden backdrop-blur-md shadow-xl ${
-                    notifications[0].type === 'error' ? 'bg-red-500 text-white' : 
-                    notifications[0].type === 'success' ? 'bg-green-500 text-white' : 
-                    'bg-[#001D4A] text-white'
-                  }`}
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
-                    <i className="fas fa-bullhorn text-sm animate-bounce text-orange-400"></i>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[8px] md:text-[9px] font-black uppercase tracking-widest opacity-60 mb-0.5">Live Alert Broadcast</p>
-                    <p className="text-sm md:text-base font-bold tracking-tight">{notifications[0].content}</p>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          )}
+          {/* Notice Board - Only displays active unread broadcast notices. Disappears when marked as Read */}
+          {(() => {
+            const activeUnreadNotices = notifications.filter(n => !readNotificationIds.includes(String(n.id)));
+            if (activeUnreadNotices.length === 0) return null;
+            const topNotice = activeUnreadNotices[0];
+
+            return (
+              <div className="mb-6 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.div 
+                    key={topNotice.id}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className={`p-4 md:p-5 rounded-[28px] border border-white/20 flex items-center justify-between gap-4 relative overflow-hidden backdrop-blur-md shadow-lg ${
+                      topNotice.type === 'error' ? 'bg-red-500 text-white' : 
+                      topNotice.type === 'success' ? 'bg-emerald-600 text-white' : 
+                      'bg-[#001D4A] text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                        <i className="fas fa-bullhorn text-xs animate-bounce text-orange-300"></i>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-[8px] md:text-[9px] font-black uppercase tracking-widest opacity-75">
+                            Live Alert Broadcast
+                          </p>
+                          <span className="bg-orange-400 text-white text-[8px] font-black px-1.5 py-0.2 rounded uppercase animate-pulse">
+                            New
+                          </span>
+                        </div>
+                        <p className="text-xs md:text-sm font-bold tracking-tight truncate">{topNotice.content}</p>
+                      </div>
+                    </div>
+
+                    {/* Banner Quick Actions: Read (Disappears from banner) & Clear */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => handleMarkNoticeAsRead(String(topNotice.id))}
+                        className="px-3 py-1.5 bg-white/20 hover:bg-white/30 active:scale-95 text-white rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 shadow-sm"
+                        title="পড়া হয়েছে (ব্যানার থেকে হাইড হবে, বেল আইকনের All-এ থাকবে)"
+                      >
+                        <i className="fas fa-check"></i>
+                        <span>Read</span>
+                      </button>
+                      <button
+                        onClick={() => handleClearNotice(String(topNotice.id))}
+                        className="w-8 h-8 bg-white/10 hover:bg-white/20 active:scale-95 text-white rounded-xl flex items-center justify-center text-xs transition-all"
+                        title="নোটিফিকেশন ডিলিট করুন"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            );
+          })()}
 
           {/* TAB 1: SEAT PLAN & MULTI-SEAT BOOKING */}
           {activeTab === 'booking' && (
@@ -945,6 +1253,7 @@ const App: React.FC = () => {
             <EditData
               buses={buses}
               onUpdate={handleSingleBookingSubmit}
+              onMultiUpdate={handleMultiBookingSubmit}
               onDelete={handleBookingDelete}
               onBulkDelete={handleBulkDelete}
               onEdit={(info) => {
@@ -955,6 +1264,8 @@ const App: React.FC = () => {
               bookers={bookers}
               isAdmin={isAdminAuthenticated}
               currentAgentCode={authenticatedAgent?.code}
+              notify={notify}
+              requestConfirm={(msg, action) => setConfirmDialog({ message: msg, onConfirm: () => { action(); setConfirmDialog(null); } })}
             />
           )}
 
