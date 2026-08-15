@@ -1,0 +1,8 @@
+{
+  "name": "Tour লাগবে - Bus Seat Booking & Tour Management",
+  "description": "A comprehensive tour and bus booking management system for Tour লাগবে featuring multi-seat group bookings, customizable bus layouts, hotel & room allocation, dynamic pricing, and 6/A4 ticket & 10/A4 food token print wizards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
