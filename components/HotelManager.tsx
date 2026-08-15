@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Hotel, HotelRoom, RoomType, BookingInfo, Tour, Gender } from '../types';
-import { DEFAULT_HOTELS, DEFAULT_ROOMS } from '../constants';
+import { DEFAULT_HOTELS, DEFAULT_ROOMS, BUSINESS_INFO } from '../constants';
 
 interface HotelManagerProps {
   hotels: Hotel[];
@@ -17,6 +17,7 @@ interface HotelManagerProps {
   onAssignPassenger: (roomId: string, bookingId: string) => void;
   onUnassignPassenger: (roomId: string, bookingId: string) => void;
   onBulkAssign?: (roomId: string, bookingIds: string[]) => void;
+  onMakeRelaxTour?: (tourName: string) => void;
   notify?: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
@@ -45,22 +46,33 @@ const HotelManager: React.FC<HotelManagerProps> = ({
   onUnassignPassenger,
   notify
 }) => {
-  // Only Relax Tours are eligible for Hotel & Room Allocation
+  // Relax Tours eligibility filter (supports explicit Relax, relex/relax keywords, or hotel_name presence)
+  const isTourRelax = (t: Tour) => {
+    return t.tour_type === 'Relax' || 
+           t.tour_type?.toLowerCase().includes('relax') || 
+           t.name.toLowerCase().includes('relax') || 
+           t.name.toLowerCase().includes('relex') || 
+           Boolean(t.hotel_applicable) || 
+           Boolean(t.hotel_name);
+  };
+
   const relaxTours = useMemo(() => {
-    return tours.filter(t => t.tour_type === 'Relax' || t.tour_type?.toLowerCase().includes('relax'));
+    const list = tours.filter(isTourRelax);
+    return list.length > 0 ? list : tours;
   }, [tours]);
 
   const [selectedTourName, setSelectedTourName] = useState<string>(() => {
-    const firstRelax = tours.find(t => t.tour_type === 'Relax' || t.tour_type?.toLowerCase().includes('relax'));
+    const firstRelax = tours.find(isTourRelax) || tours[0];
     return firstRelax?.name || '';
   });
 
-  // Keep selected tour in sync if relaxTours update
+  // Keep selected tour in sync if tours update
   React.useEffect(() => {
-    if (relaxTours.length > 0 && (!selectedTourName || !relaxTours.some(t => t.name === selectedTourName))) {
-      setSelectedTourName(relaxTours[0].name);
+    if (tours.length > 0 && (!selectedTourName || !tours.some(t => t.name === selectedTourName))) {
+      const firstRelax = tours.find(isTourRelax) || tours[0];
+      setSelectedTourName(firstRelax?.name || '');
     }
-  }, [relaxTours, selectedTourName]);
+  }, [tours, selectedTourName]);
 
   const [activeSubTab, setActiveSubTab] = useState<'allocation' | 'hotels' | 'print'>('allocation');
 
@@ -94,13 +106,11 @@ const HotelManager: React.FC<HotelManagerProps> = ({
     hotelId: ''
   });
 
-  // Filter bookings for current Relax tour only (Day Long tours excluded)
+  // Filter bookings for current Relax tour
   const tourBookings = useMemo(() => {
     if (!selectedTourName) return [];
-    const isRelax = relaxTours.some(t => t.name === selectedTourName);
-    if (!isRelax) return [];
     return allBookings.filter(b => b.busNo === selectedTourName || b.tourName === selectedTourName);
-  }, [allBookings, selectedTourName, relaxTours]);
+  }, [allBookings, selectedTourName]);
 
   // Filter rooms for current tour
   const tourRooms = useMemo(() => {
@@ -219,7 +229,165 @@ const HotelManager: React.FC<HotelManagerProps> = ({
   };
 
   const handlePrintAllocationSheet = () => {
-    window.print();
+    try {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        window.print();
+        return;
+      }
+
+      const totalOccupants = tourRooms.reduce((acc, r) => {
+        const occ = tourBookings.filter(b => (r.assignedBookingIds || []).includes(b.id));
+        return acc + occ.length;
+      }, 0);
+      const totalCapacity = tourRooms.reduce((acc, r) => acc + (r.capacity || 0), 0);
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Hotel Room Allocation Sheet - ${selectedTourName}</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700;800&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+            <style>
+              @page {
+                size: A4 portrait;
+                margin: 10mm 8mm;
+              }
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                box-sizing: border-box;
+              }
+              body {
+                font-family: 'Inter', 'Hind Siliguri', sans-serif;
+                background: #ffffff;
+                color: #111827;
+                margin: 0;
+                padding: 10px;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+              }
+              th, td {
+                border: 1px solid #cbd5e1;
+                padding: 6px 8px;
+                font-size: 11px;
+              }
+              th {
+                background-color: #001D4A !important;
+                color: #ffffff !important;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                font-size: 10px;
+              }
+              tr:nth-child(even) {
+                background-color: #f8fafc;
+              }
+            </style>
+          </head>
+          <body onload="window.print()">
+            <div class="max-w-4xl mx-auto space-y-4">
+              <!-- Header -->
+              <div class="flex justify-between items-center border-b-2 border-[#001D4A] pb-3">
+                <div class="flex items-center gap-3">
+                  <img src="${BUSINESS_INFO.logo}" class="h-10 object-contain" />
+                  <div>
+                    <h1 class="text-lg font-black text-[#001D4A] uppercase tracking-tight leading-tight">${BUSINESS_INFO.name}</h1>
+                    <p class="text-xs font-bold text-orange-600 uppercase tracking-wide">হোটেল ও রুম বরাদ্দ তালিকা (Hotel & Room Allocation Sheet)</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs font-black text-gray-900">ট্যুর: <span class="text-indigo-900">${selectedTourName}</span></p>
+                  <p class="text-[10px] text-gray-500 font-bold">তারিখ: ${new Date().toLocaleDateString('bn-BD')}</p>
+                </div>
+              </div>
+
+              <!-- Summary Badges -->
+              <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                <div class="p-2 bg-indigo-50 border border-indigo-200 rounded-lg">
+                  <p class="text-[9px] font-black uppercase text-indigo-700">মোট রুম</p>
+                  <p class="text-sm font-black text-indigo-950">${tourRooms.length} টি</p>
+                </div>
+                <div class="p-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <p class="text-[9px] font-black uppercase text-emerald-700">বরাদ্দকৃত যাত্রী</p>
+                  <p class="text-sm font-black text-emerald-950">${totalOccupants} জন</p>
+                </div>
+                <div class="p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p class="text-[9px] font-black uppercase text-blue-700">সর্বমোট ধারণক্ষমতা</p>
+                  <p class="text-sm font-black text-blue-950">${totalCapacity} জন</p>
+                </div>
+                <div class="p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p class="text-[9px] font-black uppercase text-amber-700">ফাঁকা সিট/বেড</p>
+                  <p class="text-sm font-black text-amber-950">${Math.max(0, totalCapacity - totalOccupants)} টি</p>
+                </div>
+              </div>
+
+              <!-- Allocation Table -->
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 12%;">Room No</th>
+                    <th style="width: 14%;">Room Type</th>
+                    <th style="width: 10%;">Capacity</th>
+                    <th style="width: 18%;">Hotel Name</th>
+                    <th style="width: 30%;">Occupants (Passenger Name & Seat)</th>
+                    <th style="width: 16%;">Contact Mobile</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tourRooms.length === 0 ? `
+                    <tr>
+                      <td colspan="6" class="text-center py-6 text-gray-400 font-bold">এই ট্যুরের জন্য এখনো কোনো রুম তৈরি করা হয়নি।</td>
+                    </tr>
+                  ` : tourRooms.map(room => {
+                    const occupants = tourBookings.filter(b => (room.assignedBookingIds || []).includes(b.id));
+                    return `
+                      <tr>
+                        <td class="font-black text-gray-950">Room ${room.roomNo}</td>
+                        <td class="font-bold">${room.roomType}</td>
+                        <td class="font-black text-center">${occupants.length} / ${room.capacity}</td>
+                        <td class="font-bold text-gray-800">${room.hotelName}</td>
+                        <td>
+                          ${occupants.length === 0 ? `
+                            <span class="text-gray-400 italic">-- Vacant (ফাঁকা) --</span>
+                          ` : `
+                            <div class="space-y-1">
+                              ${occupants.map(occ => `
+                                <div class="flex items-center justify-between gap-1 text-[10px]">
+                                  <span><b>[Seat ${occ.seatNo}]</b> ${occ.name}</span>
+                                  <span class="text-gray-500">(${occ.gender || 'MALE'})</span>
+                                </div>
+                              `).join('')}
+                            </div>
+                          `}
+                        </td>
+                        <td class="font-bold text-gray-700">
+                          ${occupants.map(o => o.mobile).filter(Boolean).join(', ') || '--'}
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+
+              <!-- Footer Note -->
+              <div class="flex justify-between items-center text-[9px] text-gray-500 pt-3 border-t border-gray-200">
+                <p>System Generated Report • Tour লাগবে Cloud Platform</p>
+                <p>Authorized Signature: ___________________</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } catch (err) {
+      window.print();
+    }
   };
 
   return (
@@ -253,27 +421,30 @@ const HotelManager: React.FC<HotelManagerProps> = ({
 
         {/* Relax Tour Filter & Print Buttons */}
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          {relaxTours.length > 0 ? (
+          {tours.length > 0 ? (
             <select
               value={selectedTourName}
               onChange={(e) => setSelectedTourName(e.target.value)}
-              className="px-4 py-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl font-black text-emerald-800 text-xs uppercase outline-none shadow-sm cursor-pointer"
+              className="px-4 py-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl font-black text-emerald-900 text-xs uppercase outline-none shadow-sm cursor-pointer hover:bg-emerald-100/70 transition-all"
             >
-              {relaxTours.map(t => (
-                <option key={t.name} value={t.name}>
-                  🏝️ {t.name} (Relax Tour)
-                </option>
-              ))}
+              {tours.map(t => {
+                const isRelax = isTourRelax(t);
+                return (
+                  <option key={t.name} value={t.name}>
+                    {isRelax ? `🏨 ${t.name} (Relax Tour)` : `🚌 ${t.name} (Day Long)`}
+                  </option>
+                );
+              })}
             </select>
           ) : (
             <span className="px-4 py-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-2xl text-xs font-black">
-              ⚠️ কোনো Relax Tour নেই (Day Long ট্যুরে প্রযোজ্য নয়)
+              ⚠️ কোনো ট্যুর পাওয়া যায়নি
             </span>
           )}
 
           <button
             onClick={() => setActiveSubTab('print')}
-            disabled={relaxTours.length === 0}
+            disabled={!selectedTourName}
             className="px-5 py-3.5 bg-[#001D4A] text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md hover:bg-opacity-90 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-40"
           >
             <i className="fas fa-print"></i>
@@ -282,13 +453,14 @@ const HotelManager: React.FC<HotelManagerProps> = ({
         </div>
       </div>
 
-      {relaxTours.length === 0 && (
-        <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[28px] text-center">
-          <i className="fas fa-umbrella-beach text-3xl text-amber-500 mb-2"></i>
-          <h4 className="font-black text-[#001D4A] text-base">হোটেল ও রুম ম্যানেজমেন্ট শুধুমাত্র Relax Tour-এর জন্য প্রযোজ্য</h4>
-          <p className="text-gray-600 text-xs font-medium mt-1">
-            ডে লং (Day Long) ট্যুরে কোনো হোটেল বরাদ্দের প্রয়োজন নেই। অ্যাডমিন প্যানেল থেকে ট্যুর টাইপ 'Relax Tour' সেট করলে এখানে রুম তৈরি ও যাত্রী বরাদ্দ করা যাবে।
-          </p>
+      {tours.find(t => t.name === selectedTourName)?.tour_type === 'Day Long' && (
+        <div className="bg-blue-50/80 border border-blue-200 p-4 rounded-2xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <i className="fas fa-info-circle text-blue-500 text-base shrink-0"></i>
+            <p className="text-blue-900 text-xs font-bold">
+              বর্তমানে নির্বাচিত <span className="underline">{selectedTourName}</span> একটি Day Long ট্যুর। আপনি চাইলে এই ট্যুরেও হোটেল ও রুম বরাদ্দ করতে পারেন অথবা অ্যাডমিন প্যানেল থেকে ট্যুর টাইপ 'Relax' নির্বাচন করতে পারেন।
+            </p>
+          </div>
         </div>
       )}
 

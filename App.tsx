@@ -124,9 +124,26 @@ const App: React.FC = () => {
       const allRawNotices: any[] = noticesRes.data || [];
       const fetchedNotices: any[] = allRawNotices.filter((n: any) => n.is_active !== false && !String(n.id || '').startsWith('cfg_'));
 
-      // Sync Cloud Configurations (Bus Layouts, Hotels, Rooms) across all devices
+      // Sync Cloud Configurations (Bus Layouts, Hotels, Rooms, Tours Meta) across all devices
       let currentBusLayout = busLayout;
       let currentTourLayouts = busLayoutsByTour;
+
+      // 1. Sync Tours Metadata (to guarantee Relax Tour type, couple extra fee, hotel info never reset)
+      let toursMetaMap: Record<string, Partial<Tour>> = {};
+      try {
+        toursMetaMap = JSON.parse(localStorage.getItem('tl_tours_meta') || '{}');
+      } catch (e) {}
+
+      const toursMetaNotice = allRawNotices.find((n: any) => n.id === 'cfg_tours_meta');
+      if (toursMetaNotice?.content) {
+        try {
+          const parsed = JSON.parse(toursMetaNotice.content);
+          if (parsed && typeof parsed === 'object') {
+            toursMetaMap = { ...toursMetaMap, ...parsed };
+            localStorage.setItem('tl_tours_meta', toursMetaNotice.content);
+          }
+        } catch (e) {}
+      }
 
       const layoutNotice = allRawNotices.find((n: any) => n.id === 'cfg_bus_layout');
       if (layoutNotice?.content) {
@@ -229,7 +246,24 @@ const App: React.FC = () => {
         };
       });
 
-      setTours(fetchedTours);
+      // Map tours with guaranteed Relax Tour & Hotel metadata resolution
+      const rawToursList = (fetchedTours && fetchedTours.length > 0 ? fetchedTours : tours);
+      const mappedTours: Tour[] = rawToursList.map((t: any) => {
+        const meta = toursMetaMap[t.name] || {};
+        const isRelaxName = t.name.toLowerCase().includes('relax') || t.name.toLowerCase().includes('relex');
+        const resolvedType = t.tour_type || meta.tour_type || (isRelaxName ? 'Relax' : 'Day Long');
+        return {
+          name: t.name,
+          fee: Number(t.fee) || 0,
+          tour_type: resolvedType,
+          couple_extra_fee: t.couple_extra_fee !== undefined ? Number(t.couple_extra_fee) : (meta.couple_extra_fee !== undefined ? Number(meta.couple_extra_fee) : (resolvedType === 'Relax' ? 1000 : 0)),
+          hotel_applicable: t.hotel_applicable !== undefined ? Boolean(t.hotel_applicable) : (meta.hotel_applicable !== undefined ? Boolean(meta.hotel_applicable) : (resolvedType === 'Relax')),
+          hotel_name: t.hotel_name || meta.hotel_name || '',
+          sort_order: t.sort_order !== undefined ? Number(t.sort_order) : (meta.sort_order !== undefined ? Number(meta.sort_order) : 0)
+        };
+      }).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+      setTours(mappedTours);
       setBookers(fetchedBookers);
       setCustomerTypes(fetchedTypes);
       setExpenses((expensesRes.data || []).map((ex: any) => ({
@@ -694,6 +728,7 @@ const App: React.FC = () => {
   };
 
   const handleAssignPassenger = async (roomId: string, bookingId: string) => {
+    const targetRoom = rooms.find(r => r.id === roomId);
     const updatedRooms = rooms.map(r => {
       const currentAssigned = r.assignedBookingIds || [];
       if (r.id === roomId) {
@@ -708,6 +743,21 @@ const App: React.FC = () => {
     });
     setRooms(updatedRooms);
     localStorage.setItem('tl_hotel_rooms', JSON.stringify(updatedRooms));
+    
+    // Also sync hotel room details into booking metadata & Supabase
+    if (targetRoom) {
+      try {
+        const meta = JSON.parse(localStorage.getItem('tl_booking_meta') || '{}');
+        meta[bookingId] = { ...(meta[bookingId] || {}), hotelRoomNo: targetRoom.roomNo, hotelName: targetRoom.hotelName };
+        localStorage.setItem('tl_booking_meta', JSON.stringify(meta));
+        
+        await supabase.from('tl_bookings').update({
+          hotel_room_no: targetRoom.roomNo,
+          hotel_name: targetRoom.hotelName
+        }).eq('id', bookingId);
+      } catch (e) {}
+    }
+
     try {
       await supabase.from('tl_notices').upsert({
         id: 'cfg_rooms',
@@ -728,6 +778,20 @@ const App: React.FC = () => {
     });
     setRooms(updatedRooms);
     localStorage.setItem('tl_hotel_rooms', JSON.stringify(updatedRooms));
+
+    try {
+      const meta = JSON.parse(localStorage.getItem('tl_booking_meta') || '{}');
+      if (meta[bookingId]) {
+        meta[bookingId].hotelRoomNo = null;
+        meta[bookingId].hotelName = null;
+        localStorage.setItem('tl_booking_meta', JSON.stringify(meta));
+      }
+      await supabase.from('tl_bookings').update({
+        hotel_room_no: null,
+        hotel_name: null
+      }).eq('id', bookingId);
+    } catch (e) {}
+
     try {
       await supabase.from('tl_notices').upsert({
         id: 'cfg_rooms',
@@ -790,27 +854,123 @@ const App: React.FC = () => {
     }
   };
 
-  // Admin Master Data Handlers
+  // Admin Master Data Handlers - Robust Relax Tour & Hotel Persistence
   const handleTourUpsert = async (tour: Tour) => {
     try {
-      const fullPayload = { 
-        name: tour.name, 
-        fee: tour.fee,
-        tour_type: tour.tour_type || 'Day Long',
-        couple_extra_fee: tour.couple_extra_fee || 0,
-        hotel_name: tour.hotel_name || null,
+      const isRelax = tour.tour_type === 'Relax' || 
+                      tour.name.toLowerCase().includes('relax') || 
+                      tour.name.toLowerCase().includes('relex');
+      
+      const resolvedTourType = isRelax ? 'Relax' : (tour.tour_type || 'Day Long');
+      const resolvedCoupleFee = tour.couple_extra_fee !== undefined ? Number(tour.couple_extra_fee) : (isRelax ? 1000 : 0);
+      const resolvedHotelName = tour.hotel_name?.trim() || (isRelax ? `${tour.name} Resort/Hotel` : '');
+      
+      const finalTour: Tour = {
+        name: tour.name.trim(),
+        fee: Number(tour.fee) || 0,
+        tour_type: resolvedTourType,
+        couple_extra_fee: resolvedCoupleFee,
+        hotel_applicable: isRelax,
+        hotel_name: resolvedHotelName,
         sort_order: tour.sort_order || 0
+      };
+
+      // 1. Update local and cloud metadata config notice (ensures Relax Tour never resets)
+      let currentMeta: Record<string, any> = {};
+      try {
+        currentMeta = JSON.parse(localStorage.getItem('tl_tours_meta') || '{}');
+      } catch (e) {}
+      const updatedMeta = { ...currentMeta, [finalTour.name]: finalTour };
+      localStorage.setItem('tl_tours_meta', JSON.stringify(updatedMeta));
+
+      // 2. If it's a Relax Tour, ensure a Hotel & Starter Rooms exist for this tour in HotelManager
+      if (isRelax) {
+        setHotels(prevHotels => {
+          const hotelExists = prevHotels.some(h => h.tourName === finalTour.name || (resolvedHotelName && h.name === resolvedHotelName));
+          if (!hotelExists) {
+            const newHotelObj: Hotel = {
+              id: `htl_${Date.now()}`,
+              name: resolvedHotelName || `${finalTour.name} Luxury Resort`,
+              location: finalTour.name,
+              tourName: finalTour.name,
+              contactNumber: '01800000000',
+              address: `${finalTour.name} Premium Hotel & Resort Accommodation`
+            };
+            const updatedHotels = [...prevHotels, newHotelObj];
+            localStorage.setItem('tl_hotels', JSON.stringify(updatedHotels));
+            supabase.from('tl_notices').upsert({
+              id: 'cfg_hotels',
+              title: 'Config Hotels',
+              content: JSON.stringify(updatedHotels),
+              is_active: false
+            }).then(() => {});
+
+            // Auto-create starter rooms for this hotel
+            setRooms(prevRooms => {
+              const roomsExist = prevRooms.some(r => r.tourName === finalTour.name);
+              if (!roomsExist) {
+                const starterRooms: HotelRoom[] = [
+                  { id: `rm_${Date.now()}_101`, hotelId: newHotelObj.id, hotelName: newHotelObj.name, tourName: finalTour.name, roomNo: '101', roomType: 'Couple', capacity: 2, floor: '1st Floor', assignedBookingIds: [] },
+                  { id: `rm_${Date.now()}_102`, hotelId: newHotelObj.id, hotelName: newHotelObj.name, tourName: finalTour.name, roomNo: '102', roomType: 'Couple', capacity: 2, floor: '1st Floor', assignedBookingIds: [] },
+                  { id: `rm_${Date.now()}_103`, hotelId: newHotelObj.id, hotelName: newHotelObj.name, tourName: finalTour.name, roomNo: '103', roomType: 'Combine4', capacity: 4, floor: '1st Floor', assignedBookingIds: [] },
+                  { id: `rm_${Date.now()}_201`, hotelId: newHotelObj.id, hotelName: newHotelObj.name, tourName: finalTour.name, roomNo: '201', roomType: 'Combine5', capacity: 5, floor: '2nd Floor', assignedBookingIds: [] },
+                  { id: `rm_${Date.now()}_202`, hotelId: newHotelObj.id, hotelName: newHotelObj.name, tourName: finalTour.name, roomNo: '202', roomType: 'Single', capacity: 1, floor: '2nd Floor', assignedBookingIds: [] }
+                ];
+                const updatedRooms = [...prevRooms, ...starterRooms];
+                localStorage.setItem('tl_hotel_rooms', JSON.stringify(updatedRooms));
+                supabase.from('tl_notices').upsert({
+                  id: 'cfg_rooms',
+                  title: 'Config Rooms',
+                  content: JSON.stringify(updatedRooms),
+                  is_active: false
+                }).then(() => {});
+                return updatedRooms;
+              }
+              return prevRooms;
+            });
+
+            return updatedHotels;
+          }
+          return prevHotels;
+        });
+      }
+
+      // 3. Upsert Cloud Config Notice
+      try {
+        await supabase.from('tl_notices').upsert({
+          id: 'cfg_tours_meta',
+          title: 'Config Tours Meta',
+          content: JSON.stringify(updatedMeta),
+          is_active: false
+        });
+      } catch (err) {}
+
+      // 4. Upsert to Supabase tl_tours
+      const fullPayload = { 
+        name: finalTour.name, 
+        fee: finalTour.fee,
+        tour_type: finalTour.tour_type,
+        couple_extra_fee: finalTour.couple_extra_fee,
+        hotel_name: finalTour.hotel_name || null,
+        hotel_applicable: finalTour.hotel_applicable,
+        sort_order: finalTour.sort_order || 0
       };
       let { error } = await supabase.from('tl_tours').upsert(fullPayload, { onConflict: 'name' });
       if (error && (error.code === 'PGRST204' || error.message?.includes('column') || error.message?.includes('schema cache'))) {
-        const basePayload = { name: tour.name, fee: tour.fee };
+        const basePayload = { 
+          name: finalTour.name, 
+          fee: finalTour.fee,
+          hotel_name: finalTour.hotel_name || null
+        };
         const retry = await supabase.from('tl_tours').upsert(basePayload, { onConflict: 'name' });
         error = retry.error;
       }
       if (error) throw error;
       fetchData();
-      notify("Tour updated", 'success');
-    } catch (e) { notify("Failed to save tour.", 'error'); }
+      notify(`ট্যুর "${finalTour.name}" (${finalTour.tour_type === 'Relax' ? 'রিল্যাক্স ট্যুর 🏨' : 'ডে লং'}) সফলভাবে সেভ হয়েছে!`, 'success');
+    } catch (e) { 
+      notify("Failed to save tour.", 'error'); 
+    }
   };
 
   const handleTourDelete = async (name: string) => {

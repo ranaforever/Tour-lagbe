@@ -1159,9 +1159,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
               <button
                 onClick={() => {
-                  const sql = `-- Tour Lagbe Supabase Migration Script
--- 1. Bookings table and extended group/room columns
-CREATE TABLE IF NOT EXISTS tl_bookings (
+                  const sql = `-- =========================================================================
+-- TOUR LAGBE - COMPLETE SUPABASE DATABASE SETUP SCRIPT (DROP & CREATE NEW)
+-- Copy and paste this script directly into your Supabase SQL Editor.
+-- =========================================================================
+
+-- Step 1: Enable UUID extension if needed
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Step 2: Drop old tables if you want a completely fresh database setup
+-- (Comment out DROP lines if you only want to preserve data and create missing tables)
+DROP TABLE IF EXISTS tl_locks CASCADE;
+DROP TABLE IF EXISTS tl_bookings CASCADE;
+DROP TABLE IF EXISTS tl_tours CASCADE;
+DROP TABLE IF EXISTS tl_agents CASCADE;
+DROP TABLE IF EXISTS tl_customer_types CASCADE;
+DROP TABLE IF EXISTS tl_expenses CASCADE;
+DROP TABLE IF EXISTS tl_notices CASCADE;
+
+-- Step 3: 1. Bookings Table (Single & Combined Group Bookings + Hotel/Room Info)
+CREATE TABLE tl_bookings (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   mobile TEXT NOT NULL,
@@ -1186,49 +1203,182 @@ CREATE TABLE IF NOT EXISTS tl_bookings (
   total_group_seats INTEGER DEFAULT 1,
   group_seats_list TEXT,
   hotel_room_no TEXT,
-  hotel_name TEXT
+  hotel_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS is_primary BOOLEAN DEFAULT true;
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS primary_booking_id TEXT;
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS total_group_seats INTEGER DEFAULT 1;
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS group_seats_list TEXT;
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS hotel_room_no TEXT;
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS hotel_name TEXT;
-
--- 2. Tours Table
-CREATE TABLE IF NOT EXISTS tl_tours (
+-- Step 4: 2. Tours Table (Day Long & Relax Tours with Hotel Info & Couple Fees)
+CREATE TABLE tl_tours (
   name TEXT PRIMARY KEY,
   fee NUMERIC NOT NULL DEFAULT 0,
   tour_type TEXT DEFAULT 'Day Long',
   couple_extra_fee NUMERIC DEFAULT 0,
+  hotel_applicable BOOLEAN DEFAULT false,
   hotel_name TEXT,
-  sort_order INTEGER DEFAULT 0
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-ALTER TABLE tl_tours ADD COLUMN IF NOT EXISTS tour_type TEXT DEFAULT 'Day Long';
-ALTER TABLE tl_tours ADD COLUMN IF NOT EXISTS couple_extra_fee NUMERIC DEFAULT 0;
-ALTER TABLE tl_tours ADD COLUMN IF NOT EXISTS hotel_name TEXT;
-ALTER TABLE tl_tours ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
 
--- 3. Agents Table
-CREATE TABLE IF NOT EXISTS tl_agents (
+-- Step 5: 3. Agents / Bookers Table
+CREATE TABLE tl_agents (
   code TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  last_active TIMESTAMP WITH TIME ZONE
+  phone TEXT,
+  last_active TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 4. Pricing Types Table
-CREATE TABLE IF NOT EXISTS tl_customer_types (
+-- Step 6: 4. Customer Pricing Categories Table
+CREATE TABLE tl_customer_types (
   type TEXT PRIMARY KEY,
   fee NUMERIC NOT NULL DEFAULT 0,
   tour_name TEXT,
-  sort_order INTEGER DEFAULT 0
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-ALTER TABLE tl_customer_types ADD COLUMN IF NOT EXISTS tour_name TEXT;
-ALTER TABLE tl_customer_types ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
+
+-- Step 7: 5. Real-Time Seat Locks Table
+CREATE TABLE tl_locks (
+  bus_no TEXT NOT NULL,
+  seat_no TEXT NOT NULL,
+  agent_code TEXT NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  PRIMARY KEY (bus_no, seat_no)
+);
+
+-- Step 8: 6. Accounts & Expenses Table
+CREATE TABLE tl_expenses (
+  id TEXT PRIMARY KEY,
+  category TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  description TEXT,
+  date TEXT NOT NULL,
+  recorded_by TEXT,
+  agent_code TEXT,
+  tour_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Step 9: 7. Cloud Configurations & Global Notices Table
+CREATE TABLE tl_notices (
+  id TEXT PRIMARY KEY,
+  title TEXT,
+  content TEXT NOT NULL,
+  type TEXT DEFAULT 'info',
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Step 10: Disable Row Level Security (RLS) or enable public access for seamless agent operations
+ALTER TABLE tl_bookings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_tours DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_agents DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_customer_types DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_locks DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_expenses DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_notices DISABLE ROW LEVEL SECURITY;
+
+-- Step 11: Seed Initial Agents & Admin
+INSERT INTO tl_agents (code, name, phone) VALUES
+  ('ADMIN', 'Super Admin (Head Office)', '01800000000'),
+  ('AGENT1', 'Agent Masud Rana', '01625989806'),
+  ('AGENT2', 'Agent Rafiq', '01711111111')
+ON CONFLICT (code) DO NOTHING;
+
+-- Step 12: Seed Initial Tours
+INSERT INTO tl_tours (name, fee, tour_type, couple_extra_fee, hotel_applicable, hotel_name, sort_order) VALUES
+  ('COX RELEX TOUR', 4500, 'Relax', 1000, true, 'Segul Resort Cox', 1),
+  ('SAJEK VALLEY TOUR', 5200, 'Relax', 1200, true, 'Resort RungRang', 2),
+  ('SYLHET DAY LONG', 1800, 'Day Long', 0, false, NULL, 3)
+ON CONFLICT (name) DO NOTHING;
+`;
+                  navigator.clipboard.writeText(sql);
+                  setCopiedSql(true);
+                  notify?.("সম্পূর্ণ নতুন Supabase SQL স্ক্রিপ্ট কপি হয়েছে!", 'success');
+                  setTimeout(() => setCopiedSql(false), 3000);
+                }}
+                className="px-6 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-2"
+              >
+                <i className={`fas ${copiedSql ? 'fa-check' : 'fa-copy'}`}></i>
+                <span>{copiedSql ? 'Copied!' : 'Copy Full Setup SQL'}</span>
+              </button>
+            </div>
+
+            <div className="bg-[#001D4A] p-5 rounded-3xl text-xs font-mono text-cyan-200 overflow-x-auto max-h-96 leading-relaxed border border-white/10 select-all">
+              <pre>{`-- =========================================================================
+-- TOUR LAGBE - COMPLETE SUPABASE SCRIPT (DROP & RE-CREATE ALL TABLES)
+-- =========================================================================
+
+DROP TABLE IF EXISTS tl_locks CASCADE;
+DROP TABLE IF EXISTS tl_bookings CASCADE;
+DROP TABLE IF EXISTS tl_tours CASCADE;
+DROP TABLE IF EXISTS tl_agents CASCADE;
+DROP TABLE IF EXISTS tl_customer_types CASCADE;
+DROP TABLE IF EXISTS tl_expenses CASCADE;
+DROP TABLE IF EXISTS tl_notices CASCADE;
+
+-- 1. Bookings Table (Combined Groups + Hotel/Room No)
+CREATE TABLE tl_bookings (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  mobile TEXT NOT NULL,
+  address TEXT,
+  gender TEXT,
+  religion TEXT,
+  tour_name TEXT,
+  tour_fees NUMERIC DEFAULT 0,
+  customer_type TEXT,
+  customer_type_fees NUMERIC DEFAULT 0,
+  discount_amount NUMERIC DEFAULT 0,
+  advance_amount NUMERIC DEFAULT 0,
+  due_amount NUMERIC DEFAULT 0,
+  payment_status TEXT DEFAULT 'Unpaid',
+  bus_no TEXT NOT NULL,
+  seat_no TEXT NOT NULL,
+  booked_by TEXT,
+  booker_code TEXT,
+  booking_date TEXT,
+  is_primary BOOLEAN DEFAULT true,
+  primary_booking_id TEXT,
+  total_group_seats INTEGER DEFAULT 1,
+  group_seats_list TEXT,
+  hotel_room_no TEXT,
+  hotel_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2. Tours Table
+CREATE TABLE tl_tours (
+  name TEXT PRIMARY KEY,
+  fee NUMERIC NOT NULL DEFAULT 0,
+  tour_type TEXT DEFAULT 'Day Long',
+  couple_extra_fee NUMERIC DEFAULT 0,
+  hotel_applicable BOOLEAN DEFAULT false,
+  hotel_name TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 3. Agents Table
+CREATE TABLE tl_agents (
+  code TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT,
+  last_active TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 4. Pricing Types Table
+CREATE TABLE tl_customer_types (
+  type TEXT PRIMARY KEY,
+  fee NUMERIC NOT NULL DEFAULT 0,
+  tour_name TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
 -- 5. Seat Locks Table
-CREATE TABLE IF NOT EXISTS tl_locks (
+CREATE TABLE tl_locks (
   bus_no TEXT NOT NULL,
   seat_no TEXT NOT NULL,
   agent_code TEXT NOT NULL,
@@ -1237,7 +1387,7 @@ CREATE TABLE IF NOT EXISTS tl_locks (
 );
 
 -- 6. Expenses Table
-CREATE TABLE IF NOT EXISTS tl_expenses (
+CREATE TABLE tl_expenses (
   id TEXT PRIMARY KEY,
   category TEXT NOT NULL,
   amount NUMERIC NOT NULL,
@@ -1245,47 +1395,28 @@ CREATE TABLE IF NOT EXISTS tl_expenses (
   date TEXT NOT NULL,
   recorded_by TEXT,
   agent_code TEXT,
-  tour_name TEXT
+  tour_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 7. Global Notices Table
-CREATE TABLE IF NOT EXISTS tl_notices (
+-- 7. Cloud Config & Notices Table
+CREATE TABLE tl_notices (
   id TEXT PRIMARY KEY,
+  title TEXT,
   content TEXT NOT NULL,
   type TEXT DEFAULT 'info',
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);`;
-                  navigator.clipboard.writeText(sql);
-                  setCopiedSql(true);
-                  notify?.("SQL Migration Script copied to clipboard!", 'success');
-                  setTimeout(() => setCopiedSql(false), 3000);
-                }}
-                className="px-6 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-2"
-              >
-                <i className={`fas ${copiedSql ? 'fa-check' : 'fa-copy'}`}></i>
-                <span>{copiedSql ? 'Copied!' : 'Copy SQL Script'}</span>
-              </button>
-            </div>
+);
 
-            <div className="bg-[#001D4A] p-5 rounded-3xl text-xs font-mono text-cyan-200 overflow-x-auto max-h-96 leading-relaxed border border-white/10 select-all">
-              <pre>{`-- 1. Ensure all columns exist in tl_bookings table:
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS is_primary BOOLEAN DEFAULT true;
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS primary_booking_id TEXT;
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS total_group_seats INTEGER DEFAULT 1;
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS group_seats_list TEXT;
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS hotel_room_no TEXT;
-ALTER TABLE tl_bookings ADD COLUMN IF NOT EXISTS hotel_name TEXT;
-
--- 2. Ensure all columns exist in tl_tours table:
-ALTER TABLE tl_tours ADD COLUMN IF NOT EXISTS tour_type TEXT DEFAULT 'Day Long';
-ALTER TABLE tl_tours ADD COLUMN IF NOT EXISTS couple_extra_fee NUMERIC DEFAULT 0;
-ALTER TABLE tl_tours ADD COLUMN IF NOT EXISTS hotel_name TEXT;
-ALTER TABLE tl_tours ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
-
--- 3. Ensure all columns exist in tl_customer_types table:
-ALTER TABLE tl_customer_types ADD COLUMN IF NOT EXISTS tour_name TEXT;
-ALTER TABLE tl_customer_types ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;`}</pre>
+-- Disable RLS for standard seamless access
+ALTER TABLE tl_bookings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_tours DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_agents DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_customer_types DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_locks DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_expenses DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tl_notices DISABLE ROW LEVEL SECURITY;`}</pre>
             </div>
 
             <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-900 text-xs flex items-start gap-3">

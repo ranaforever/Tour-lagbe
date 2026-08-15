@@ -98,6 +98,9 @@ const SeatDetailModal: React.FC<SeatDetailModalProps> = ({
   const advancePaid = isGroup ? groupTotalAdvance : (info.advanceAmount || 0);
   const remainingDue = isGroup ? groupTotalDue : (info.dueAmount !== undefined && info.dueAmount > 0 ? info.dueAmount : Math.max(0, totalAmount - advancePaid));
   
+  const tourNameLower = (info.tourName || info.busNo || '').toLowerCase();
+  const isRelaxTour = tourNameLower.includes('relax') || tourNameLower.includes('relex') || Boolean(primaryBooking.hotelName || primaryBooking.hotelRoomNo);
+  
   // Real payment status check
   const isTrulyPaidFull = totalAmount > 0 && advancePaid >= totalAmount && remainingDue <= 0;
   const isUnpaid = advancePaid === 0;
@@ -334,6 +337,33 @@ ${!info.isPrimary && isGroup ? `💺 *Seat Passenger:* ${info.name}\n` : ''}📍
                          ৳{(advancePaid || 0).toLocaleString()}
                        </p>
                    </div>
+
+                   {/* Hotel Accommodation Banner if assigned or Relax Tour */}
+                   {(primaryBooking.hotelName || primaryBooking.hotelRoomNo || isRelaxTour) && (
+                     <div className="bg-pink-50/90 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-pink-200/80 col-span-1 sm:col-span-2 flex items-center justify-between flex-wrap gap-2">
+                       <div>
+                         <p className="text-[9px] sm:text-[10px] font-black text-pink-600 uppercase tracking-wider mb-0.5 flex items-center gap-1.5">
+                           <i className="fas fa-hotel text-pink-500"></i>
+                           হোটেল ও রুম বরাদ্দ (Hotel & Room Allocation)
+                         </p>
+                         <p className="text-xs sm:text-sm font-black text-[#001D4A]">
+                           {primaryBooking.hotelName || `${primaryBooking.tourName || info.busNo || 'Tour'} Accommodation`}
+                           {primaryBooking.hotelRoomNo ? (
+                             <span className="ml-2 px-2 py-0.5 bg-pink-600 text-white rounded-md text-[11px] font-bold">
+                               রুম নং: {primaryBooking.hotelRoomNo}
+                             </span>
+                           ) : (
+                             <span className="ml-2 text-pink-700 text-[10px] font-bold italic">
+                               (রুম নির্ধারণ প্রক্রিয়াধীন)
+                             </span>
+                           )}
+                         </p>
+                       </div>
+                       <span className="px-2 py-1 bg-pink-100 text-pink-800 text-[9px] font-black uppercase rounded-lg border border-pink-200">
+                         Relax Tour 🏨
+                       </span>
+                     </div>
+                   )}
                 </div>
 
                 {/* QR Code & Status Footer */}
