@@ -229,23 +229,23 @@ const EditData: React.FC<EditDataProps> = ({
     <div className="animate-in fade-in duration-500 max-w-6xl mx-auto md:pl-12 space-y-6 pb-24">
       
       {/* Header & Stats Banner */}
-      <div className="bg-white rounded-[32px] shadow-sm p-6 md:p-8 border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="bg-white rounded-2xl sm:rounded-[32px] shadow-sm p-4 sm:p-6 md:p-8 border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full flex items-center gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[9px] sm:text-[10px] font-black text-indigo-600 uppercase tracking-wider sm:tracking-widest bg-indigo-50 px-2.5 py-1 rounded-full flex items-center gap-1">
               <i className="fas fa-file-invoice-dollar"></i> বিলিং ও এডিট সেন্টার
             </span>
             {isAdmin ? (
-              <span className="text-[9px] font-black text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full uppercase flex items-center gap-1">
-                <i className="fas fa-shield-alt"></i> Admin View (All Feed & Delete Access)
+              <span className="text-[8px] sm:text-[9px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
+                <i className="fas fa-shield-alt"></i> Admin View
               </span>
             ) : (
-              <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full uppercase flex items-center gap-1">
-                <i className="fas fa-user-check"></i> Agent Feed ({currentAgentCode})
+              <span className="text-[8px] sm:text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
+                <i className="fas fa-user-check"></i> Agent ({currentAgentCode})
               </span>
             )}
           </div>
-          <h2 className="text-2xl md:text-3xl font-black text-[#001D4A] tracking-tight mt-2">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-[#001D4A] tracking-tight mt-2 leading-tight">
             বুকিং বিল ও বকেয়া ব্যবস্থাপনা
           </h2>
           <p className="text-gray-400 text-xs font-bold mt-1">
@@ -254,39 +254,39 @@ const EditData: React.FC<EditDataProps> = ({
         </div>
 
         {/* Quick Financial Snapshot */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full md:w-auto">
-          <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-left min-w-[120px]">
-            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-wider block">মোট পেইড (Advance)</span>
-            <span className="text-lg md:text-xl font-black text-emerald-700">৳{stats.totalCollected.toLocaleString()}</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 w-full md:w-auto">
+          <div className="bg-emerald-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-emerald-100 text-left">
+            <span className="text-[8px] sm:text-[9px] font-black text-emerald-600 uppercase tracking-wider block">মোট পেইড</span>
+            <span className="text-base sm:text-lg md:text-xl font-black text-emerald-700">৳{(stats.totalCollected || 0).toLocaleString()}</span>
           </div>
-          <div className="bg-rose-50 p-4 rounded-2xl border border-rose-100 text-left min-w-[120px]">
-            <span className="text-[9px] font-black text-rose-600 uppercase tracking-wider block">মোট বকেয়া (Due)</span>
-            <span className="text-lg md:text-xl font-black text-rose-700">৳{stats.totalDuePending.toLocaleString()}</span>
+          <div className="bg-rose-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-rose-100 text-left">
+            <span className="text-[8px] sm:text-[9px] font-black text-rose-600 uppercase tracking-wider block">মোট বকেয়া</span>
+            <span className="text-base sm:text-lg md:text-xl font-black text-rose-700">৳{(stats.totalDuePending || 0).toLocaleString()}</span>
           </div>
-          <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-left min-w-[90px] col-span-2 sm:col-span-1">
-            <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider block">বুকড সিট</span>
-            <span className="text-lg md:text-xl font-black text-indigo-900">{stats.totalSeatsCount} টি</span>
+          <div className="bg-indigo-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-indigo-100 text-left col-span-2 sm:col-span-1">
+            <span className="text-[8px] sm:text-[9px] font-black text-indigo-600 uppercase tracking-wider block">বুকড সিট</span>
+            <span className="text-base sm:text-lg md:text-xl font-black text-indigo-900">{stats.totalSeatsCount} টি</span>
           </div>
         </div>
       </div>
 
       {/* Search and Filters Bar */}
-      <div className="bg-white rounded-[32px] shadow-sm p-6 md:p-8 border border-gray-100 sticky top-0 md:relative z-20 space-y-4">
+      <div className="bg-white rounded-2xl sm:rounded-[32px] shadow-sm p-4 sm:p-6 md:p-8 border border-gray-100 sticky top-0 md:relative z-20 space-y-3 sm:space-y-4">
         <div className="relative group">
-          <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <i className="fas fa-search absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-gray-400 text-xs sm:text-sm"></i>
           <input 
-            className="w-full pl-14 pr-6 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold outline-none shadow-inner focus:ring-2 focus:ring-indigo-500/20 text-[#001D4A]" 
-            placeholder="Search by Primary Passenger Name, Mobile, Seat, or Co-Passenger..." 
+            className="w-full pl-10 sm:pl-14 pr-4 sm:pr-6 py-3 sm:py-4 bg-gray-50 border-none rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold outline-none shadow-inner focus:ring-2 focus:ring-indigo-500/20 text-[#001D4A]" 
+            placeholder="Search by Primary Passenger Name, Mobile, Seat..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           <select 
             value={filterTour}
             onChange={(e) => setFilterTour(e.target.value)}
-            className="w-full px-4 py-3.5 bg-indigo-50/70 border-none rounded-2xl font-black text-indigo-900 text-xs uppercase outline-none"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 bg-indigo-50/70 border-none rounded-xl sm:rounded-2xl font-black text-indigo-900 text-[11px] sm:text-xs uppercase outline-none"
           >
             <option value="">সকল ট্যুর (All Tours)</option>
             {uniqueTours.map(t => <option key={t} value={t}>{t}</option>)}
@@ -295,7 +295,7 @@ const EditData: React.FC<EditDataProps> = ({
           <select 
             value={filterPayment}
             onChange={(e) => setFilterPayment(e.target.value as any)}
-            className="w-full px-4 py-3.5 bg-indigo-50/70 border-none rounded-2xl font-black text-indigo-900 text-xs uppercase outline-none"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 bg-indigo-50/70 border-none rounded-xl sm:rounded-2xl font-black text-indigo-900 text-[11px] sm:text-xs uppercase outline-none"
           >
             <option value="all">পেমেন্ট স্ট্যাটাস: সকল</option>
             <option value="due">⚠️ শুধু বকেয়া আছে (Has Due)</option>
@@ -305,7 +305,7 @@ const EditData: React.FC<EditDataProps> = ({
           <select 
             value={filterBooker}
             onChange={(e) => setFilterBooker(e.target.value)}
-            className="w-full px-4 py-3.5 bg-indigo-50/70 border-none rounded-2xl font-black text-indigo-900 text-xs uppercase outline-none"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 bg-indigo-50/70 border-none rounded-xl sm:rounded-2xl font-black text-indigo-900 text-[11px] sm:text-xs uppercase outline-none"
           >
             <option value="">{isAdmin ? 'সকল এজেন্ট (All Agents)' : 'আমার বুকিং ফিড'}</option>
             {bookers.filter(a => isAdmin || a.code.toUpperCase() === currentAgentCode?.toUpperCase()).map(agent => (
@@ -323,14 +323,14 @@ const EditData: React.FC<EditDataProps> = ({
                     setSelectedGroupIds(filteredGroups.map(g => g.id));
                   }
                 }}
-                className="flex-1 px-3 py-3 bg-[#001D4A] text-white rounded-2xl font-black text-[10px] uppercase hover:bg-[#002868] transition-all"
+                className="flex-1 px-3 py-2.5 sm:py-3 bg-[#001D4A] text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase hover:bg-[#002868] transition-all"
               >
-                {selectedGroupIds.length === filteredGroups.length && filteredGroups.length > 0 ? 'Deselect All' : 'Select All'}
+                {selectedGroupIds.length === filteredGroups.length && filteredGroups.length > 0 ? 'Deselect' : 'Select All'}
               </button>
               <button 
                 onClick={handleBulkDeleteSelected}
                 disabled={selectedGroupIds.length === 0}
-                className="flex-1 px-3 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-[10px] uppercase disabled:opacity-40 transition-all"
+                className="flex-1 px-3 py-2.5 sm:py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase disabled:opacity-40 transition-all"
               >
                 Delete ({selectedGroupIds.length})
               </button>
@@ -340,11 +340,11 @@ const EditData: React.FC<EditDataProps> = ({
       </div>
 
       {/* Bill List / Groups Cards */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {filteredGroups.length === 0 ? (
-          <div className="py-20 text-center bg-white rounded-[32px] border-2 border-dashed border-gray-200">
-            <i className="fas fa-file-invoice text-gray-300 text-5xl mb-4"></i>
-            <h4 className="text-base font-black text-gray-500 uppercase tracking-wider">কোন বুকিং বিল পাওয়া যায়নি</h4>
+          <div className="py-16 sm:py-20 text-center bg-white rounded-2xl sm:rounded-[32px] border-2 border-dashed border-gray-200 p-4">
+            <i className="fas fa-file-invoice text-gray-300 text-4xl sm:text-5xl mb-4"></i>
+            <h4 className="text-sm sm:text-base font-black text-gray-500 uppercase tracking-wider">কোন বুকিং বিল পাওয়া যায়নি</h4>
             <p className="text-gray-400 text-xs mt-1">অনুসন্ধানের কিওয়ার্ড বা ফিল্টার পরিবর্তন করে চেষ্টা করুন।</p>
           </div>
         ) : (
@@ -356,53 +356,53 @@ const EditData: React.FC<EditDataProps> = ({
             return (
               <div 
                 key={group.id} 
-                className={`bg-white rounded-[32px] border transition-all duration-200 overflow-hidden ${
+                className={`bg-white rounded-2xl sm:rounded-[32px] border transition-all duration-200 overflow-hidden ${
                   isSelected ? 'border-indigo-600 ring-2 ring-indigo-50 shadow-md' : 'border-gray-100 shadow-sm hover:border-gray-200'
                 }`}
               >
                 {/* Main Card Header */}
-                <div className="p-6 md:p-7 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                <div className="p-4 sm:p-6 md:p-7 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6">
                   
                   {/* Passenger & Tour Info */}
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                  <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0 w-full">
                     {isAdmin && (
                       <input 
                         type="checkbox" 
                         checked={isSelected}
                         onChange={() => setSelectedGroupIds(prev => prev.includes(group.id) ? prev.filter(id => id !== group.id) : [...prev, group.id])}
-                        className="mt-1.5 w-5 h-5 rounded-lg border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        className="mt-1 w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
                       />
                     )}
 
                     <div className="space-y-1.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[9px] font-black text-indigo-700 bg-indigo-50 px-3 py-1 rounded-xl uppercase tracking-wider">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <span className="text-[8px] sm:text-[9px] font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg sm:rounded-xl uppercase tracking-wider">
                           {group.leadBooking.tourName || group.leadBooking.busNo}
                         </span>
-                        <span className="text-[9px] font-black text-white bg-[#001D4A] px-3 py-1 rounded-xl uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                        <span className="text-[8px] sm:text-[9px] font-black text-white bg-[#001D4A] px-2.5 py-1 rounded-lg sm:rounded-xl uppercase tracking-wider flex items-center gap-1 shadow-sm">
                           <i className="fas fa-couch text-[8px]"></i>
                           {group.totalSeats > 1 ? `Seats: ${group.seatsList.join(', ')} (${group.totalSeats})` : `Seat: ${group.leadBooking.seatNo}`}
                         </span>
-                        <span className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider ${
+                        <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-wider ${
                           group.isPaidFull 
                             ? 'bg-emerald-100 text-emerald-800' 
                             : 'bg-amber-100 text-amber-800'
                         }`}>
-                          {group.isPaidFull ? '✓ Paid Full' : '⚠️ Due Pending'}
+                          {group.isPaidFull ? '✓ Paid' : '⚠️ Due'}
                         </span>
                       </div>
 
                       {/* Primary Passenger Name */}
                       <div className="pt-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded-md">
+                          <span className="text-[9px] sm:text-[10px] font-black text-orange-600 uppercase tracking-wider bg-orange-50 px-2 py-0.5 rounded-md">
                             প্রধান বুকিংকারী (Lead)
                           </span>
                         </div>
-                        <h3 className="text-xl md:text-2xl font-black text-[#001D4A] leading-tight truncate mt-0.5">
+                        <h3 className="text-base sm:text-xl md:text-2xl font-black text-[#001D4A] leading-tight truncate mt-0.5">
                           {group.leadBooking.name}
                         </h3>
-                        <p className="text-xs font-bold text-gray-500 flex items-center gap-2 mt-1">
+                        <p className="text-[11px] sm:text-xs font-bold text-gray-500 flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
                           <span>+880{group.leadBooking.mobile}</span>
                           <span>•</span>
                           <span>Agent: <strong className="text-indigo-900">{group.agentName} ({group.agentCode})</strong></span>
@@ -414,34 +414,34 @@ const EditData: React.FC<EditDataProps> = ({
                   </div>
 
                   {/* Financial Bill Breakdown */}
-                  <div className="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-end border-t lg:border-t-0 pt-4 lg:pt-0 border-gray-100">
-                    <div className="bg-gray-50 px-4 py-2.5 rounded-2xl text-left border border-gray-100">
-                      <span className="text-[8px] font-black text-gray-400 uppercase tracking-wider block leading-none mb-1">মোট বিল (Gross)</span>
-                      <span className="text-sm font-black text-gray-800">৳{group.totalGrossAmount.toLocaleString()}</span>
+                  <div className="grid grid-cols-3 sm:flex items-center gap-2 sm:gap-3 w-full lg:w-auto border-t lg:border-t-0 pt-3 lg:pt-0 border-gray-100">
+                    <div className="bg-gray-50 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl text-left border border-gray-100">
+                      <span className="text-[7px] sm:text-[8px] font-black text-gray-400 uppercase tracking-wider block leading-none mb-1">মোট বিল</span>
+                      <span className="text-xs sm:text-sm font-black text-gray-800">৳{(group.totalGrossAmount || 0).toLocaleString()}</span>
                     </div>
 
-                    <div className="bg-emerald-50 px-4 py-2.5 rounded-2xl text-left border border-emerald-100">
-                      <span className="text-[8px] font-black text-emerald-600 uppercase tracking-wider block leading-none mb-1">অগ্রিম (Advance)</span>
-                      <span className="text-sm md:text-base font-black text-emerald-700">৳{group.totalAdvance.toLocaleString()}</span>
+                    <div className="bg-emerald-50 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl text-left border border-emerald-100">
+                      <span className="text-[7px] sm:text-[8px] font-black text-emerald-600 uppercase tracking-wider block leading-none mb-1">অগ্রিম</span>
+                      <span className="text-xs sm:text-sm md:text-base font-black text-emerald-700">৳{(group.totalAdvance || 0).toLocaleString()}</span>
                     </div>
 
-                    <div className={`px-4 py-2.5 rounded-2xl text-left border ${group.totalDue > 0 ? 'bg-rose-50 border-rose-200' : 'bg-gray-50 border-gray-100'}`}>
-                      <span className={`text-[8px] font-black uppercase tracking-wider block leading-none mb-1 ${group.totalDue > 0 ? 'text-rose-600' : 'text-gray-400'}`}>
-                        বকেয়া (Due)
+                    <div className={`px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl text-left border ${group.totalDue > 0 ? 'bg-rose-50 border-rose-200' : 'bg-gray-50 border-gray-100'}`}>
+                      <span className={`text-[7px] sm:text-[8px] font-black uppercase tracking-wider block leading-none mb-1 ${group.totalDue > 0 ? 'text-rose-600' : 'text-gray-400'}`}>
+                        বকেয়া
                       </span>
-                      <span className={`text-base md:text-lg font-black ${group.totalDue > 0 ? 'text-rose-700' : 'text-gray-500'}`}>
-                        ৳{group.totalDue.toLocaleString()}
+                      <span className={`text-xs sm:text-base md:text-lg font-black ${group.totalDue > 0 ? 'text-rose-700' : 'text-gray-500'}`}>
+                        ৳{(group.totalDue || 0).toLocaleString()}
                       </span>
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center gap-2 w-full lg:w-auto border-t lg:border-t-0 pt-3 lg:pt-0 border-gray-100">
+                  <div className="flex items-center gap-1.5 sm:gap-2 w-full lg:w-auto border-t lg:border-t-0 pt-3 lg:pt-0 border-gray-100 flex-wrap">
                     {/* Due Clear Button (Available to Booker Agent and Admin) */}
                     {group.totalDue > 0 && (
                       <button
                         onClick={() => setActiveDueGroup(group)}
-                        className="flex-1 lg:flex-none px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                        className="flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
                       >
                         <i className="fas fa-hand-holding-dollar"></i>
                         <span>বকেয়া ক্লিয়ার</span>
@@ -451,22 +451,22 @@ const EditData: React.FC<EditDataProps> = ({
                     {/* Edit Passenger Booking Details */}
                     <button
                       onClick={() => onEdit(group.leadBooking)}
-                      className="px-3.5 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1"
+                      className="px-3 sm:px-3.5 py-2.5 sm:py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1"
                       title="Edit Booking"
                     >
                       <i className="fas fa-pen-to-square"></i>
-                      <span className="hidden sm:inline">Edit</span>
+                      <span>Edit</span>
                     </button>
 
                     {/* Delete (Admin only) */}
                     {isAdmin && (
                       <button
                         onClick={() => handleDeleteGroup(group)}
-                        className="px-3.5 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1"
+                        className="px-3 sm:px-3.5 py-2.5 sm:py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1"
                         title="Delete Entire Booking"
                       >
                         <i className="fas fa-trash-alt"></i>
-                        <span className="hidden sm:inline">Delete</span>
+                        <span>Del</span>
                       </button>
                     )}
 
@@ -474,9 +474,9 @@ const EditData: React.FC<EditDataProps> = ({
                     {coPassengers.length > 0 && (
                       <button
                         onClick={() => setExpandedGroupId(isExpanded ? null : group.id)}
-                        className="px-3.5 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1"
+                        className="px-3 sm:px-3.5 py-2.5 sm:py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs uppercase tracking-wider transition-all flex items-center gap-1"
                       >
-                        <span>Co-Passengers ({coPassengers.length})</span>
+                        <span>Co-Pax ({coPassengers.length})</span>
                         <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-[10px]`}></i>
                       </button>
                     )}
@@ -485,31 +485,31 @@ const EditData: React.FC<EditDataProps> = ({
 
                 {/* Co-Passengers Dropdown Section */}
                 {isExpanded && coPassengers.length > 0 && (
-                  <div className="bg-gray-50/70 p-5 md:p-6 border-t border-dashed border-gray-200 space-y-3">
+                  <div className="bg-gray-50/70 p-4 sm:p-5 md:p-6 border-t border-dashed border-gray-200 space-y-3">
                     <h5 className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
                       <i className="fas fa-users text-indigo-500"></i>
                       <span>কো-প্যাসেঞ্জার তালিকা (Co-Passenger Details)</span>
                     </h5>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
                       {coPassengers.map((cp, idx) => (
-                        <div key={cp.id} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex justify-between items-center">
-                          <div>
+                        <div key={cp.id} className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm flex justify-between items-center gap-2">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
                               <span className="text-[8px] font-black bg-[#001D4A] text-white px-2 py-0.5 rounded uppercase">
                                 Seat {cp.seatNo}
                               </span>
                               <span className="text-[8px] font-bold text-gray-400">#{idx + 2}</span>
                             </div>
-                            <h6 className="font-black text-sm text-[#001D4A] mt-1">{cp.name}</h6>
-                            <p className="text-[10px] font-bold text-gray-500 mt-0.5">
+                            <h6 className="font-black text-xs sm:text-sm text-[#001D4A] mt-1 truncate">{cp.name}</h6>
+                            <p className="text-[9px] sm:text-[10px] font-bold text-gray-500 mt-0.5 truncate">
                               {cp.mobile ? `+880${cp.mobile}` : 'Same contact as Lead'} • {cp.gender || 'MALE'}
                             </p>
                           </div>
                           
                           <button
                             onClick={() => onEdit(cp)}
-                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-black rounded-xl uppercase transition-all"
+                            className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-black rounded-xl uppercase transition-all shrink-0"
                           >
                             Edit
                           </button>

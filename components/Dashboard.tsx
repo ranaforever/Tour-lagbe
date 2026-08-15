@@ -78,11 +78,11 @@ const Dashboard: React.FC<DashboardProps> = ({ buses, expenses, notify }) => {
   }, [allBookings]);
 
   const stats = [
-    { label: 'Fleet Capacity', value: buses.reduce((acc, b) => acc + b.seats.length, 0), icon: 'fa-chair', color: 'bg-indigo-600' },
+    { label: 'Fleet Capacity', value: buses.reduce((acc, b) => acc + (b?.seats?.length || 0), 0), icon: 'fa-chair', color: 'bg-indigo-600' },
     { label: 'Confirmed Seats', value: allBookings.length, icon: 'fa-check-double', color: 'bg-green-500' },
-    { label: 'Projected Sales', value: `৳${totalRevenue.toLocaleString()}`, icon: 'fa-sack-dollar', color: 'bg-blue-500' },
-    { label: 'Total Due', value: `৳${totalDue.toLocaleString()}`, icon: 'fa-hand-holding-dollar', color: 'bg-orange-500' },
-    { label: 'Projected Profit', value: `৳${netProfit.toLocaleString()}`, icon: 'fa-chart-pie', color: 'bg-[#001D4A]' },
+    { label: 'Projected Sales', value: `৳${(totalRevenue || 0).toLocaleString()}`, icon: 'fa-sack-dollar', color: 'bg-blue-500' },
+    { label: 'Total Due', value: `৳${(totalDue || 0).toLocaleString()}`, icon: 'fa-hand-holding-dollar', color: 'bg-orange-500' },
+    { label: 'Projected Profit', value: `৳${(netProfit || 0).toLocaleString()}`, icon: 'fa-chart-pie', color: 'bg-[#001D4A]' },
   ];
 
   return (
@@ -147,7 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({ buses, expenses, notify }) => {
                        </div>
                        <div>
                          <p className="text-sm font-bold truncate max-w-[120px]">{agent.name}</p>
-                         <p className="text-[8px] text-white/30 font-bold uppercase">{agent.seats} Seats • ৳{agent.revenue.toLocaleString()}</p>
+                         <p className="text-[8px] text-white/30 font-bold uppercase">{agent.seats} Seats • ৳{(agent.revenue || 0).toLocaleString()}</p>
                        </div>
                     </div>
                     <div className="text-right">
@@ -178,7 +178,7 @@ const Dashboard: React.FC<DashboardProps> = ({ buses, expenses, notify }) => {
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-xs font-black text-red-600">৳{agent.discount.toLocaleString()}</p>
+                       <p className="text-xs font-black text-red-600">৳{(agent.discount || 0).toLocaleString()}</p>
                     </div>
                   </div>
                 )) : (
@@ -205,7 +205,7 @@ const Dashboard: React.FC<DashboardProps> = ({ buses, expenses, notify }) => {
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-xs font-black text-orange-600">৳{agent.due.toLocaleString()}</p>
+                       <p className="text-xs font-black text-orange-600">৳{(agent.due || 0).toLocaleString()}</p>
                     </div>
                   </div>
                 )) : (
@@ -269,7 +269,7 @@ const Dashboard: React.FC<DashboardProps> = ({ buses, expenses, notify }) => {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-black text-indigo-600 text-sm">৳{(b.tourFees + b.customerTypeFees - b.discountAmount).toLocaleString()}</p>
+                      <p className="font-black text-indigo-600 text-sm">৳{(((b.tourFees || 0) + (b.customerTypeFees || 0) - (b.discountAmount || 0)) || 0).toLocaleString()}</p>
                       <p className={`text-[9px] font-black uppercase ${b.dueAmount > 0 ? 'text-red-500' : 'text-green-500'}`}>
                         {b.dueAmount > 0 ? `Due: ৳${b.dueAmount}` : 'Fully Paid'}
                       </p>

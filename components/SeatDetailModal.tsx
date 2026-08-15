@@ -131,9 +131,9 @@ ${!info.isPrimary && isGroup ? `💺 *Seat Passenger:* ${info.name}\n` : ''}📍
 💺 *Seats (${displayTotalSeats}):* ${displaySeatString}
 📞 *Contact:* +880${primaryBooking.mobile}
 
-💰 *Total Price:* ৳${totalAmount.toLocaleString()}
-💵 *Advance Paid:* ৳${advancePaid.toLocaleString()}
-🔴 *Due Balance:* ৳${dueBal.toLocaleString()}
+💰 *Total Price:* ৳${(totalAmount || 0).toLocaleString()}
+💵 *Advance Paid:* ৳${(advancePaid || 0).toLocaleString()}
+🔴 *Due Balance:* ৳${(dueBal || 0).toLocaleString()}
 ✅ *Status:* ${dueBal <= 0 ? 'Paid' : 'Partial'}
 
 🆔 *Booking ID:* ${primaryBooking.id}
@@ -302,7 +302,7 @@ ${!info.isPrimary && isGroup ? `💺 *Seat Passenger:* ${info.name}\n` : ''}📍
                       <div className="bg-emerald-50/60 p-3 rounded-2xl border border-emerald-100/60">
                           <p className="text-[10px] md:text-[11px] font-black text-emerald-600 uppercase tracking-wider mb-0.5">Total Paid (Advance)</p>
                           <p className="text-base md:text-lg font-black text-emerald-700">
-                            ৳{(isGroup ? groupTotalAdvance : info.advanceAmount).toLocaleString()}
+                            ৳{((isGroup ? groupTotalAdvance : info.advanceAmount) || 0).toLocaleString()}
                           </p>
                       </div>
                    </div>
@@ -331,7 +331,7 @@ ${!info.isPrimary && isGroup ? `💺 *Seat Passenger:* ${info.name}\n` : ''}📍
                         <div className="bg-rose-50 px-4 py-2 rounded-2xl border border-rose-100 text-right">
                           <p className="text-[10px] md:text-[11px] font-black text-rose-500 uppercase tracking-wider mb-0.5">Total Remaining Due</p>
                           <p className="text-2xl md:text-3xl font-black text-rose-600 leading-none">
-                            ৳{(isGroup ? groupTotalDue : info.dueAmount).toLocaleString()}
+                            ৳{((isGroup ? groupTotalDue : info.dueAmount) || 0).toLocaleString()}
                           </p>
                         </div>
                       ) : (

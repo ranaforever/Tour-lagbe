@@ -124,8 +124,8 @@ const BookingLog: React.FC<BookingLogProps> = ({ buses, isAdmin }) => {
                   </td>
                   <td className="px-6 py-4 font-black text-gray-700">{b.tourName}</td>
                   <td className="px-6 py-4">
-                    <p className="font-black text-gray-800">৳{(b.tourFees + b.customerTypeFees).toLocaleString()}</p>
-                    <p className="text-[10px] text-red-500 font-black">DUE: ৳{b.dueAmount.toLocaleString()}</p>
+                    <p className="font-black text-gray-800">৳{(((b.tourFees || 0) + (b.customerTypeFees || 0)) || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-red-500 font-black">DUE: ৳{(b.dueAmount || 0).toLocaleString()}</p>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${b.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
@@ -167,7 +167,7 @@ const BookingLog: React.FC<BookingLogProps> = ({ buses, isAdmin }) => {
                   </div>
                   <div className="text-right">
                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Financials</p>
-                    <p className="text-[10px] font-black text-gray-900 leading-none">৳{(b.tourFees + b.customerTypeFees).toLocaleString()}</p>
+                    <p className="text-[10px] font-black text-gray-900 leading-none">৳{(((b.tourFees || 0) + (b.customerTypeFees || 0)) || 0).toLocaleString()}</p>
                     <p className="text-[9px] font-black text-red-500 mt-0.5">DUE: ৳{b.dueAmount}</p>
                   </div>
                   <div>

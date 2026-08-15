@@ -1022,7 +1022,7 @@ const App: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row max-w-full overflow-x-hidden">
       {/* Desktop Sidebar Navigation */}
       <nav className="hidden md:flex fixed top-0 left-0 bottom-0 w-24 bg-[#001D4A] flex-col items-center justify-between py-8 shadow-2xl z-50">
         <div className="flex flex-col items-center w-full">
@@ -1045,32 +1045,32 @@ const App: React.FC = () => {
       </nav>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[75px] bg-[#001D4A]/95 backdrop-blur-md flex items-center justify-around z-[100] border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] px-1 pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[68px] sm:h-[75px] bg-[#001D4A]/95 backdrop-blur-md flex items-center justify-around z-[100] border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] px-1 pb-safe max-w-full">
         {navItems.map(item => (
-          <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all py-2 rounded-2xl mx-0.5 ${activeTab === item.id ? 'bg-orange-500 text-white shadow-lg' : 'text-white/30'}`}>
-            <i className={`fas ${item.icon} text-lg`}></i>
+          <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`flex-1 flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all py-1.5 sm:py-2 rounded-xl sm:rounded-2xl mx-0.5 ${activeTab === item.id ? 'bg-orange-500 text-white shadow-lg' : 'text-white/30'}`}>
+            <i className={`fas ${item.icon} text-base sm:text-lg`}></i>
             <span className="text-[7px] font-black uppercase tracking-tight">{item.label}</span>
           </button>
         ))}
         {isAdminAuthenticated && (
-          <button onClick={() => setActiveTab('admin')} className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all py-2 rounded-2xl mx-0.5 ${activeTab === 'admin' ? 'bg-orange-500 text-white shadow-lg' : 'text-white/30'}`}>
-            <i className="fas fa-user-shield text-lg"></i>
+          <button onClick={() => setActiveTab('admin')} className={`flex-1 flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all py-1.5 sm:py-2 rounded-xl sm:rounded-2xl mx-0.5 ${activeTab === 'admin' ? 'bg-orange-500 text-white shadow-lg' : 'text-white/30'}`}>
+            <i className="fas fa-user-shield text-base sm:text-lg"></i>
             <span className="text-[7px] font-black uppercase tracking-tight">Admin</span>
           </button>
         )}
       </nav>
 
-      <main className="flex-grow md:ml-24 p-4 md:p-10 pb-24 md:pb-10">
-        <header className="flex justify-between items-center mb-6 md:mb-8">
-          <div className="flex items-center gap-3">
-            <div className="md:hidden w-10 h-10 bg-white p-2 rounded-xl shadow-sm"><img src={BUSINESS_INFO.logo} className="w-full" /></div>
-            <div>
-              <h2 className="text-xl md:text-3xl font-black text-[#001D4A] uppercase tracking-tighter leading-none">
+      <main className="flex-grow md:ml-24 p-3 sm:p-5 md:p-10 pb-24 md:pb-10 min-w-0 max-w-full overflow-x-hidden">
+        <header className="flex justify-between items-center mb-4 sm:mb-6 md:mb-8 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div className="md:hidden w-9 h-9 sm:w-10 sm:h-10 bg-white p-1.5 sm:p-2 rounded-xl shadow-sm shrink-0"><img src={BUSINESS_INFO.logo} className="w-full h-full object-contain" /></div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-[#001D4A] uppercase tracking-tighter leading-tight truncate">
                 {activeTab === 'booking' ? 'Seat Plan & Booking' : activeTab === 'rooms' ? 'Hotel & Room Allocation' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
               </h2>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                <p className="text-[8px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0"></div>
+                <p className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">
                   Online: {onlineAgents.map(a => a.name).join(', ') || 'No active agents'}
                 </p>
               </div>
@@ -1165,16 +1165,16 @@ const App: React.FC = () => {
           {activeTab === 'booking' && (
             <div className="animate-in fade-in duration-500 space-y-6">
               {/* Tour / Route Selector Bar */}
-              <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Route:</span>
+              <div className="bg-white p-3 sm:p-4 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 sticky top-0 z-40 max-w-full overflow-hidden">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0">Route:</span>
                   <select
                     value={selectedBusIndex}
                     onChange={(e) => {
                       setSelectedBusIndex(Number(e.target.value));
                       setSelectedSeatIds([]);
                     }}
-                    className="bg-indigo-50 font-black text-[#001D4A] rounded-xl px-4 py-2.5 outline-none text-xs uppercase tracking-wider cursor-pointer"
+                    className="bg-indigo-50 font-black text-[#001D4A] rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 outline-none text-xs uppercase tracking-wider cursor-pointer w-full min-w-0 max-w-full truncate"
                   >
                     {buses.map((bus, idx) => {
                       const matchingTour = tours.find(t => t.name === bus.busId);
@@ -1189,13 +1189,13 @@ const App: React.FC = () => {
 
                 {/* Tour Info Badges */}
                 {tours[selectedBusIndex] && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 shrink-0">
                     <span className="text-[9px] font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg uppercase">
-                      Fee: ৳{tours[selectedBusIndex].fee?.toLocaleString()}
+                      Fee: ৳{(tours[selectedBusIndex].fee ?? 0).toLocaleString()}
                     </span>
                     {tours[selectedBusIndex].tour_type === 'Relax' && (
                       <span className="text-[9px] font-black text-pink-700 bg-pink-50 px-2.5 py-1 rounded-lg uppercase">
-                        🏖️ Relax Tour {tours[selectedBusIndex].couple_extra_fee ? `(+৳${tours[selectedBusIndex].couple_extra_fee} Couple)` : ''}
+                        🏖️ Relax Tour {tours[selectedBusIndex].couple_extra_fee ? `(+৳${(tours[selectedBusIndex].couple_extra_fee ?? 0).toLocaleString()} Couple)` : ''}
                       </span>
                     )}
                   </div>

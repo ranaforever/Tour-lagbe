@@ -499,7 +499,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       <div>
                         <span className="font-black text-[#001D4A] text-xs block">{primaryData.tourName}</span>
                         <span className="text-[10px] text-gray-500 font-bold">
-                          প্রতি সিট ৳{tourPerSeatFee.toLocaleString()} × {activeSeatIds.length} = ৳{(tourPerSeatFee * activeSeatIds.length).toLocaleString()}
+                          প্রতি সিট ৳{(tourPerSeatFee || 0).toLocaleString()} × {activeSeatIds.length} = ৳{((tourPerSeatFee || 0) * activeSeatIds.length).toLocaleString()}
                         </span>
                       </div>
                       <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase ${isRelaxTour ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
@@ -519,7 +519,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     >
                       {filteredTypes.map(c => (
                         <option key={c.type} value={c.type}>
-                          {c.type} {c.fee > 0 ? `(+৳${c.fee.toLocaleString()})` : '(স্ট্যান্ডার্ড ফি)'}
+                          {c.type} {(c.fee || 0) > 0 ? `(+৳${(c.fee || 0).toLocaleString()})` : '(স্ট্যান্ডার্ড ফি)'}
                         </option>
                       ))}
                     </select>
@@ -528,7 +528,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   {isRelaxTour && coupleExtraFee > 0 && (
                     <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between text-xs text-emerald-800 font-bold">
                       <span><i className="fas fa-hotel mr-1 text-emerald-600"></i> কাপল রুম অতিরিক্ত ফি:</span>
-                      <span className="font-black">৳{coupleExtraFee.toLocaleString()}</span>
+                      <span className="font-black">৳{(coupleExtraFee || 0).toLocaleString()}</span>
                     </div>
                   )}
                 </div>
@@ -611,13 +611,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
                           Net Due (বকেয়া)
                         </span>
                         <span className="text-xl font-black text-amber-300">
-                          ৳{dueAmount.toLocaleString()}
+                          ৳{(dueAmount || 0).toLocaleString()}
                         </span>
                       </div>
                     </div>
                     
                     <div className="flex justify-between items-center text-[10px] text-gray-300 font-bold pt-0.5">
-                      <span>মোট গ্রস বিল: ৳{totalGross.toLocaleString()}</span>
+                      <span>মোট গ্রস বিল: ৳{(totalGross || 0).toLocaleString()}</span>
                       <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${dueAmount <= 0 ? 'bg-emerald-500 text-white' : (primaryData.advanceAmount > 0 ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white')}`}>
                         {dueAmount <= 0 ? 'Paid' : (primaryData.advanceAmount > 0 ? 'Partial' : 'Unpaid')}
                       </span>

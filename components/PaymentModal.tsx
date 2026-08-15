@@ -83,7 +83,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ info, onClose, onConfirm, i
             <form onSubmit={handleSettle} className="space-y-6">
               <div className="bg-orange-50 p-6 rounded-[24px] flex flex-col items-center border border-orange-100">
                 <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Current Balance Due</span>
-                <span className="text-4xl font-black text-orange-600 tracking-tighter">৳{info.dueAmount.toLocaleString()}</span>
+                <span className="text-4xl font-black text-orange-600 tracking-tighter">৳{(info?.dueAmount || 0).toLocaleString()}</span>
               </div>
               
               <div className="space-y-2">

@@ -333,11 +333,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                           <div class="flex gap-4 pt-0.5">
                             <div class="bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200/60 flex-1">
                               <p class="text-[7px] font-black uppercase text-emerald-700 leading-none">Total Paid</p>
-                              <p class="text-[12px] font-black text-emerald-700 leading-none mt-0.5">৳${g.totalAdvance.toLocaleString()}</p>
+                              <p class="text-[12px] font-black text-emerald-700 leading-none mt-0.5">৳${(g.totalAdvance || 0).toLocaleString()}</p>
                             </div>
                             <div class="bg-rose-50 px-2 py-1 rounded-md border border-rose-200/60 flex-1">
                               <p class="text-[7px] font-black uppercase text-rose-700 leading-none">Total Due</p>
-                              <p class="text-[12px] font-black text-rose-700 leading-none mt-0.5">৳${g.totalDue.toLocaleString()}</p>
+                              <p class="text-[12px] font-black text-rose-700 leading-none mt-0.5">৳${(g.totalDue || 0).toLocaleString()}</p>
                             </div>
                           </div>
                         </div>
@@ -570,27 +570,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-20 px-2 md:px-4">
+    <div className="max-w-6xl mx-auto pb-20 px-1 sm:px-3 md:px-4 max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 sm:mb-6 gap-2 sm:gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-black text-[#001D4A] tracking-tighter uppercase">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-[#001D4A] tracking-tighter uppercase leading-tight">
             Admin Control Center (এডমিন প্যানেল)
           </h2>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+          <p className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
             Tour Configuration, Bus Layout, Hotel Allocations & Batch Print
           </p>
         </div>
       </div>
 
       {/* Navigation Tabs - Mobile Optimized Horizontal Scroll / Wrap */}
-      <div className="flex overflow-x-auto no-scrollbar md:flex-wrap bg-white p-1.5 rounded-[24px] sm:rounded-[28px] shadow-sm mb-6 md:mb-8 gap-1.5 border border-gray-100 -mx-1 px-2 sm:mx-0">
+      <div className="flex overflow-x-auto no-scrollbar md:flex-wrap bg-white p-1.5 rounded-2xl sm:rounded-[28px] shadow-sm mb-4 sm:mb-6 md:mb-8 gap-1.5 border border-gray-100 max-w-full">
         {navTabs.map(tab => (
           <button 
             key={tab.id} 
             onClick={() => setActiveSubTab(tab.id as any)} 
-            className={`flex items-center justify-center shrink-0 gap-1.5 md:gap-2 px-3.5 py-2.5 sm:px-4 sm:py-3 md:px-5 md:py-3.5 rounded-[18px] sm:rounded-[20px] transition-all uppercase active:scale-95 ${
-              activeSubTab === tab.id ? 'bg-[#001D4A] text-white shadow-lg' : 'text-gray-500 hover:text-gray-800 bg-gray-50/60 md:bg-transparent'
+            className={`flex items-center justify-center shrink-0 gap-1.5 md:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3 rounded-xl sm:rounded-[20px] transition-all uppercase active:scale-95 ${
+              activeSubTab === tab.id ? 'bg-[#001D4A] text-white shadow-lg' : 'text-gray-500 hover:text-gray-800 bg-gray-50/70 md:bg-transparent'
             }`}
           >
             <i className={`fas ${tab.icon} text-xs`}></i>
@@ -601,17 +601,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* SUB-TAB 1: TOURS & ROUTES (Enhanced with Tour Type, Couple Extra Fee & Hotel) */}
       {activeSubTab === 'tours' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <form onSubmit={addTour} className="bg-white p-6 md:p-8 rounded-[32px] shadow-sm border border-gray-100 flex flex-col gap-5">
-            <h4 className="font-black text-[11px] uppercase text-[#001D4A] tracking-widest border-l-4 border-orange-500 pl-3">
+        <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+          <form onSubmit={addTour} className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 flex flex-col gap-4 sm:gap-5">
+            <h4 className="font-black text-[10px] sm:text-[11px] uppercase text-[#001D4A] tracking-widest border-l-4 border-orange-500 pl-3">
               ট্যুর রুট ও ফি কনফিগারেশন (Add New Tour Route)
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-1">
                 <label className="text-[9px] font-black uppercase text-gray-400">ট্যুর নাম (Tour Name) *</label>
                 <input
                   required
-                  className="w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl font-bold text-xs text-[#001D4A] outline-none"
+                  className="w-full px-3.5 py-3 sm:px-4 sm:py-3.5 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-bold text-xs text-[#001D4A] outline-none"
                   placeholder="e.g. Sajek Valley Relax Tour"
                   value={newTour.name}
                   onChange={e => setNewTour({ ...newTour, name: e.target.value })}
@@ -623,7 +623,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 <input
                   required
                   type="number"
-                  className="w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl font-bold text-xs text-[#001D4A] outline-none"
+                  className="w-full px-3.5 py-3 sm:px-4 sm:py-3.5 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-bold text-xs text-[#001D4A] outline-none"
                   placeholder="4500"
                   value={newTour.fee || ''}
                   onChange={e => setNewTour({ ...newTour, fee: Number(e.target.value) })}
@@ -635,7 +635,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 <select
                   value={newTour.tour_type}
                   onChange={e => setNewTour({ ...newTour, tour_type: e.target.value as 'Day Long' | 'Relax' })}
-                  className="w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl font-black text-xs text-indigo-700 outline-none uppercase"
+                  className="w-full px-3.5 py-3 sm:px-4 sm:py-3.5 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-black text-xs text-indigo-700 outline-none uppercase"
                 >
                   <option value="Day Long">Day Long (ডে লং)</option>
                   <option value="Relax">Relax Tour (রিলাক্স ট্যুর)</option>
@@ -646,7 +646,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 <label className="text-[9px] font-black uppercase text-gray-400">কাপল এক্সট্রা ফি (Couple Extra Fee ৳)</label>
                 <input
                   type="number"
-                  className="w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl font-bold text-xs text-[#001D4A] outline-none"
+                  className="w-full px-3.5 py-3 sm:px-4 sm:py-3.5 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-bold text-xs text-[#001D4A] outline-none"
                   placeholder="1000"
                   value={newTour.couple_extra_fee || ''}
                   onChange={e => setNewTour({ ...newTour, couple_extra_fee: Number(e.target.value) })}
@@ -656,7 +656,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               <div className="space-y-1 md:col-span-2">
                 <label className="text-[9px] font-black uppercase text-gray-400">হোটেল / রিসোর্ট নাম (Hotel Name - Optional)</label>
                 <input
-                  className="w-full px-4 py-3.5 bg-gray-50 border-none rounded-2xl font-bold text-xs text-[#001D4A] outline-none"
+                  className="w-full px-3.5 py-3 sm:px-4 sm:py-3.5 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-bold text-xs text-[#001D4A] outline-none"
                   placeholder="e.g. Resort RungRang / MeghKabya"
                   value={newTour.hotel_name}
                   onChange={e => setNewTour({ ...newTour, hotel_name: e.target.value })}
@@ -666,17 +666,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
             <button
               type="submit"
-              className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-black shadow-lg uppercase text-xs tracking-widest active:scale-95 transition-all"
+              className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl sm:rounded-2xl font-black shadow-lg uppercase text-xs tracking-wider active:scale-95 transition-all"
             >
               ট্যুর যুক্ত করুন (Register Tour Route)
             </button>
           </form>
 
           {/* Tours List */}
-          <div className="space-y-3">
+          <div className="space-y-2.5 sm:space-y-3">
             {tours.map((t, i) => (
-              <div key={i} className="bg-white p-5 rounded-[28px] border border-gray-100 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex-grow w-full">
+              <div key={i} className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border border-gray-100 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex-grow w-full min-w-0">
                   {editTourIndex === i ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                       <input
@@ -710,8 +710,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
                   ) : (
                     <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-black text-[#001D4A] text-sm uppercase">{t.name}</p>
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <p className="font-black text-[#001D4A] text-xs sm:text-sm uppercase">{t.name}</p>
                         <span className={`text-[8px] font-black px-2 py-0.5 rounded-md uppercase ${
                           t.tour_type === 'Relax' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'
                         }`}>
@@ -723,35 +723,35 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 mt-1">
-                        <p className="text-[10px] font-black text-indigo-600">Base Fee: ৳{t.fee.toLocaleString()}</p>
+                      <div className="flex items-center gap-3 sm:gap-4 mt-1 flex-wrap">
+                        <p className="text-[9px] sm:text-[10px] font-black text-indigo-600">Base Fee: ৳{(t.fee || 0).toLocaleString()}</p>
                         {t.couple_extra_fee ? (
-                          <p className="text-[10px] font-black text-pink-600">Couple Extra: +৳{t.couple_extra_fee.toLocaleString()}</p>
+                          <p className="text-[9px] sm:text-[10px] font-black text-pink-600">Couple Extra: +৳{(t.couple_extra_fee || 0).toLocaleString()}</p>
                         ) : null}
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 self-end md:self-center">
-                  <div className="flex flex-col gap-1 mr-2">
-                    <button onClick={() => moveTour(i, 'up')} disabled={i === 0} className="text-gray-300 hover:text-orange-600 disabled:opacity-30">
+                <div className="flex items-center gap-1.5 sm:gap-2 self-end sm:self-center shrink-0">
+                  <div className="flex flex-col gap-0.5 sm:gap-1 mr-1">
+                    <button onClick={() => moveTour(i, 'up')} disabled={i === 0} className="text-gray-300 hover:text-orange-600 disabled:opacity-30 p-1">
                       <i className="fas fa-chevron-up text-[10px]"></i>
                     </button>
-                    <button onClick={() => moveTour(i, 'down')} disabled={i === tours.length - 1} className="text-gray-300 hover:text-orange-600 disabled:opacity-30">
+                    <button onClick={() => moveTour(i, 'down')} disabled={i === tours.length - 1} className="text-gray-300 hover:text-orange-600 disabled:opacity-30 p-1">
                       <i className="fas fa-chevron-down text-[10px]"></i>
                     </button>
                   </div>
                   {editTourIndex === i ? (
-                    <button onClick={saveTourEdit} className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
-                      <i className="fas fa-check"></i>
+                    <button onClick={saveTourEdit} className="w-8 h-8 sm:w-10 sm:h-10 bg-green-50 text-green-600 rounded-lg sm:rounded-xl flex items-center justify-center">
+                      <i className="fas fa-check text-xs"></i>
                     </button>
                   ) : (
                     <>
-                      <button onClick={() => { setEditTourIndex(i); setEditTourData(t); }} className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                      <button onClick={() => { setEditTourIndex(i); setEditTourData(t); }} className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 text-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center">
                         <i className="fas fa-pen text-[10px]"></i>
                       </button>
-                      <button onClick={() => onDeleteTour(t.name)} className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
+                      <button onClick={() => onDeleteTour(t.name)} className="w-8 h-8 sm:w-10 sm:h-10 bg-red-50 text-red-500 rounded-lg sm:rounded-xl flex items-center justify-center">
                         <i className="fas fa-trash-alt text-[10px]"></i>
                       </button>
                     </>
@@ -800,30 +800,30 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* SUB-TAB 4: AGENTS / BOOKERS */}
       {activeSubTab === 'agents' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <form onSubmit={addAgent} className="bg-white p-6 md:p-8 rounded-[32px] shadow-sm border flex flex-col gap-5">
+        <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+          <form onSubmit={addAgent} className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 flex flex-col gap-4 sm:gap-5">
             <h4 className="font-black text-[10px] uppercase text-[#001D4A] tracking-widest border-l-4 border-indigo-500 pl-3">Register Agent (নাম ও ফোন নম্বর)</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-1">
                 <label className="text-[9px] font-black uppercase text-gray-400">ID Code</label>
-                <input required className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-black uppercase text-sm tracking-widest" placeholder="KS101" value={newAgent.code} onChange={e => setNewAgent({...newAgent, code: e.target.value.toUpperCase()})} />
+                <input required className="w-full px-3.5 py-3 sm:px-5 sm:py-4 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-black uppercase text-xs sm:text-sm tracking-widest" placeholder="KS101" value={newAgent.code} onChange={e => setNewAgent({...newAgent, code: e.target.value.toUpperCase()})} />
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-black uppercase text-gray-400">Full Name</label>
-                <input required className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-sm" placeholder="Kazi Shetu" value={newAgent.name} onChange={e => setNewAgent({...newAgent, name: e.target.value})} />
+                <input required className="w-full px-3.5 py-3 sm:px-5 sm:py-4 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm" placeholder="Kazi Shetu" value={newAgent.name} onChange={e => setNewAgent({...newAgent, name: e.target.value})} />
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-black uppercase text-gray-400">Mobile / Phone Number</label>
-                <input required className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-sm" placeholder="017XXXXXXXX" value={newAgent.phone} onChange={e => setNewAgent({...newAgent, phone: e.target.value})} />
+                <input required className="w-full px-3.5 py-3 sm:px-5 sm:py-4 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm" placeholder="017XXXXXXXX" value={newAgent.phone} onChange={e => setNewAgent({...newAgent, phone: e.target.value})} />
               </div>
             </div>
-            <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg uppercase text-xs tracking-widest active:scale-95 transition-all">Add Agent</button>
+            <button type="submit" className="w-full py-3.5 sm:py-5 bg-indigo-600 text-white rounded-xl sm:rounded-2xl font-black shadow-lg uppercase text-xs tracking-wider sm:tracking-widest active:scale-95 transition-all">Add Agent</button>
           </form>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5 sm:space-y-3">
             {agents.map((a, i) => (
-              <div key={i} className="bg-white p-5 rounded-[28px] border border-gray-100 shadow-sm flex items-center justify-between">
-                <div className="flex-grow">
+              <div key={i} className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border border-gray-100 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex-grow w-full min-w-0">
                   {editAgentIndex === i ? (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <input className="px-3 py-2 border rounded-xl text-xs font-black uppercase" value={editAgentData?.code || ''} onChange={e => setEditAgentData({...editAgentData!, code: e.target.value.toUpperCase()})} placeholder="Code" />
@@ -831,24 +831,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                       <input className="px-3 py-2 border rounded-xl text-xs font-bold" value={editAgentData?.mobile || editAgentData?.phone || ''} onChange={e => setEditAgentData({...editAgentData!, mobile: e.target.value, phone: e.target.value})} placeholder="Phone" />
                     </div>
                   ) : (
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="font-black text-[10px] text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl uppercase tracking-widest">{a.code}</span>
-                      <p className="font-bold text-gray-900 text-sm">{a.name}</p>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <span className="font-black text-[9px] sm:text-[10px] text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl uppercase tracking-widest">{a.code}</span>
+                      <p className="font-bold text-gray-900 text-xs sm:text-sm">{a.name}</p>
                       {(a.mobile || a.phone) && (
-                        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+                        <span className="text-[11px] sm:text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
                           <i className="fas fa-phone-alt text-[9px]"></i> +880{a.mobile || a.phone}
                         </span>
                       )}
                     </div>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 self-end sm:self-center shrink-0">
                   {editAgentIndex === i ? (
-                    <button onClick={saveAgentEdit} className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center"><i className="fas fa-check"></i></button>
+                    <button onClick={saveAgentEdit} className="w-8 h-8 sm:w-10 sm:h-10 bg-green-50 text-green-600 rounded-lg sm:rounded-xl flex items-center justify-center"><i className="fas fa-check text-xs"></i></button>
                   ) : (
                     <>
-                      <button onClick={() => {setEditAgentIndex(i); setEditAgentData(a);}} className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center"><i className="fas fa-pen text-[10px]"></i></button>
-                      <button onClick={() => onDeleteAgent(a.code)} className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center"><i className="fas fa-trash-alt text-[10px]"></i></button>
+                      <button onClick={() => {setEditAgentIndex(i); setEditAgentData(a);}} className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 text-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center"><i className="fas fa-pen text-[10px]"></i></button>
+                      <button onClick={() => onDeleteAgent(a.code)} className="w-8 h-8 sm:w-10 sm:h-10 bg-red-50 text-red-500 rounded-lg sm:rounded-xl flex items-center justify-center"><i className="fas fa-trash-alt text-[10px]"></i></button>
                     </>
                   )}
                 </div>
@@ -860,27 +860,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* SUB-TAB 5: PRICING CATEGORIES */}
       {activeSubTab === 'types' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <form onSubmit={addType} className="bg-white p-6 md:p-8 rounded-[32px] shadow-sm border flex flex-col gap-5">
+        <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+          <form onSubmit={addType} className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 flex flex-col gap-4 sm:gap-5">
             <h4 className="font-black text-[10px] uppercase text-[#001D4A] tracking-widest border-l-4 border-blue-500 pl-3">Pricing Category</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="space-y-1"><label className="text-[9px] font-black uppercase text-gray-400">Category Name</label><input required className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-sm" placeholder="Solo Traveler" value={newType.type} onChange={e => setNewType({...newType, type: e.target.value})} /></div>
-              <div className="space-y-1"><label className="text-[9px] font-black uppercase text-gray-400">Surcharge (৳)</label><input required type="number" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-sm" placeholder="1500" value={newType.fee || ''} onChange={e => setNewType({...newType, fee: Number(e.target.value)})} /></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="space-y-1"><label className="text-[9px] font-black uppercase text-gray-400">Category Name</label><input required className="w-full px-3.5 py-3 sm:px-5 sm:py-4 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm" placeholder="Solo Traveler" value={newType.type} onChange={e => setNewType({...newType, type: e.target.value})} /></div>
+              <div className="space-y-1"><label className="text-[9px] font-black uppercase text-gray-400">Surcharge (৳)</label><input required type="number" className="w-full px-3.5 py-3 sm:px-5 sm:py-4 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm" placeholder="1500" value={newType.fee || ''} onChange={e => setNewType({...newType, fee: Number(e.target.value)})} /></div>
               <div className="space-y-1">
                 <label className="text-[9px] font-black uppercase text-gray-400">Restricted To Tour</label>
-                <select className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-sm outline-none cursor-pointer" value={newType.tour_name || ''} onChange={e => setNewType({...newType, tour_name: e.target.value || undefined})}>
+                <select className="w-full px-3.5 py-3 sm:px-5 sm:py-4 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm outline-none cursor-pointer" value={newType.tour_name || ''} onChange={e => setNewType({...newType, tour_name: e.target.value || undefined})}>
                   <option value="">Global (All Tours)</option>
                   {tours.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
                 </select>
               </div>
             </div>
-            <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-lg uppercase text-xs tracking-widest active:scale-95 transition-all">Save Category</button>
+            <button type="submit" className="w-full py-3.5 sm:py-5 bg-blue-600 text-white rounded-xl sm:rounded-2xl font-black shadow-lg uppercase text-xs tracking-wider sm:tracking-widest active:scale-95 transition-all">Save Category</button>
           </form>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5 sm:space-y-3">
             {customerTypes.map((c, i) => (
-              <div key={i} className="bg-white p-5 rounded-[28px] border border-gray-100 shadow-sm flex items-center justify-between">
-                <div className="flex-grow">
+              <div key={i} className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border border-gray-100 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex-grow w-full min-w-0">
                   {editTypeIndex === i ? (
                     <div className="flex gap-2">
                       <input className="px-3 py-2 border rounded-xl w-full text-xs font-bold" value={editTypeData?.type || ''} onChange={e => setEditTypeData({...editTypeData!, type: e.target.value})} />
@@ -888,25 +888,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center gap-2">
-                        <p className="font-black text-[#001D4A] text-sm uppercase">{c.type}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-black text-[#001D4A] text-xs sm:text-sm uppercase">{c.type}</p>
                         {c.tour_name && <span className="text-[8px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg uppercase tracking-widest">{c.tour_name}</span>}
                       </div>
-                      <p className="text-[10px] font-bold text-blue-600">+৳{c.fee.toLocaleString()}</p>
+                      <p className="text-[10px] font-bold text-blue-600 mt-0.5">+৳{(c.fee || 0).toLocaleString()}</p>
                     </>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <div className="flex flex-col gap-1 mr-2">
-                    <button onClick={() => moveType(i, 'up')} disabled={i === 0} className="text-gray-300 hover:text-indigo-600 disabled:opacity-30"><i className="fas fa-chevron-up text-[10px]"></i></button>
-                    <button onClick={() => moveType(i, 'down')} disabled={i === customerTypes.length - 1} className="text-gray-300 hover:text-indigo-600 disabled:opacity-30"><i className="fas fa-chevron-down text-[10px]"></i></button>
+                <div className="flex gap-2 self-end sm:self-center shrink-0">
+                  <div className="flex flex-col gap-0.5 sm:gap-1 mr-1">
+                    <button onClick={() => moveType(i, 'up')} disabled={i === 0} className="text-gray-300 hover:text-indigo-600 disabled:opacity-30 p-1"><i className="fas fa-chevron-up text-[10px]"></i></button>
+                    <button onClick={() => moveType(i, 'down')} disabled={i === customerTypes.length - 1} className="text-gray-300 hover:text-indigo-600 disabled:opacity-30 p-1"><i className="fas fa-chevron-down text-[10px]"></i></button>
                   </div>
                   {editTypeIndex === i ? (
-                    <button onClick={saveTypeEdit} className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center"><i className="fas fa-check"></i></button>
+                    <button onClick={saveTypeEdit} className="w-8 h-8 sm:w-10 sm:h-10 bg-green-50 text-green-600 rounded-lg sm:rounded-xl flex items-center justify-center"><i className="fas fa-check text-xs"></i></button>
                   ) : (
                     <>
-                      <button onClick={() => {setEditTypeIndex(i); setEditTypeData(c);}} className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center"><i className="fas fa-pen text-[10px]"></i></button>
-                      <button onClick={() => onDeleteCustomerType(c.type)} className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center"><i className="fas fa-trash-alt text-[10px]"></i></button>
+                      <button onClick={() => {setEditTypeIndex(i); setEditTypeData(c);}} className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 text-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center"><i className="fas fa-pen text-[10px]"></i></button>
+                      <button onClick={() => onDeleteCustomerType(c.type)} className="w-8 h-8 sm:w-10 sm:h-10 bg-red-50 text-red-500 rounded-lg sm:rounded-xl flex items-center justify-center"><i className="fas fa-trash-alt text-[10px]"></i></button>
                     </>
                   )}
                 </div>
@@ -918,21 +918,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* SUB-TAB 6: PRINT TICKETS (6 PER A4) */}
       {activeSubTab === 'print' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="bg-[#001D4A] p-6 md:p-8 rounded-[32px] text-white shadow-xl flex flex-col gap-6">
-            <div className="flex justify-between items-start">
+        <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+          <div className="bg-[#001D4A] p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[32px] text-white shadow-xl flex flex-col gap-4 sm:gap-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
                 <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full">
                   A4 Batch Print Layout (6 Tickets / Page)
                 </span>
-                <h3 className="text-xl font-black uppercase tracking-tighter mt-2">
+                <h3 className="text-lg sm:text-xl font-black uppercase tracking-tighter mt-2 leading-tight">
                   টিকেট প্রিন্ট উইজার্ড (Batch Ticket Printing)
                 </h3>
-                <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mt-0.5">
+                <p className="text-[9px] sm:text-[10px] font-black text-white/50 uppercase tracking-widest mt-0.5">
                   ১টি A4 পেজে ৬টি সুবিন্যস্ত টিকেট প্রিন্ট হবে (2x3 Grid)
                 </p>
               </div>
-              <div className="flex gap-4">
+              <div className="flex gap-3">
                 <button onClick={() => setSelectedForPrint(filteredPrintBookings.map(b => b.id))} className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Select All</button>
                 <button onClick={() => setSelectedForPrint([])} className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Deselect All</button>
               </div>
@@ -940,50 +940,50 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             <button
               onClick={handlePrintBatch}
               disabled={selectedForPrint.length === 0}
-              className="w-full py-5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl disabled:opacity-50 active:scale-95 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 sm:py-5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl sm:rounded-2xl font-black uppercase text-xs tracking-wider sm:tracking-[0.2em] shadow-xl disabled:opacity-50 active:scale-95 transition-all flex items-center justify-center gap-2"
             >
               <i className="fas fa-print"></i>
               <span>টিকেট প্রিন্ট করুন ({selectedForPrint.length} টিকেট)</span>
             </button>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex gap-2 mb-4 px-1">
-              <select value={printFilterTour} onChange={e => setPrintFilterTour(e.target.value)} className="flex-1 bg-white border border-gray-100 px-4 py-3 rounded-2xl text-[10px] font-black uppercase text-indigo-600 outline-none shadow-sm">
+          <div className="space-y-2.5 sm:space-y-3">
+            <div className="flex gap-2 mb-3 sm:mb-4 px-1">
+              <select value={printFilterTour} onChange={e => setPrintFilterTour(e.target.value)} className="flex-1 bg-white border border-gray-100 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase text-indigo-600 outline-none shadow-sm min-w-0">
                 <option value="">All Tours</option>
                 {tours.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
               </select>
-              <select value={printFilterBooker} onChange={e => setPrintFilterBooker(e.target.value)} className="flex-1 bg-white border border-gray-100 px-4 py-3 rounded-2xl text-[10px] font-black uppercase text-indigo-600 outline-none shadow-sm">
+              <select value={printFilterBooker} onChange={e => setPrintFilterBooker(e.target.value)} className="flex-1 bg-white border border-gray-100 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase text-indigo-600 outline-none shadow-sm min-w-0">
                 <option value="">All Agents</option>
                 {agents.map(a => <option key={a.code} value={a.code}>{a.name}</option>)}
               </select>
             </div>
             {filteredPrintBookings.length === 0 ? (
-              <div className="bg-white py-12 text-center rounded-[32px] border border-dashed border-gray-100"><p className="text-gray-400 font-black uppercase text-[10px] tracking-widest">No Matching Bookings</p></div>
+              <div className="bg-white py-12 text-center rounded-2xl sm:rounded-[32px] border border-dashed border-gray-100"><p className="text-gray-400 font-black uppercase text-[10px] tracking-widest">No Matching Bookings</p></div>
             ) : (
               filteredPrintBookings.map((g) => {
                 const b = g.leadBooking;
                 const isSelected = selectedForPrint.includes(g.id);
                 return (
-                  <div key={g.id} onClick={() => setSelectedForPrint(prev => prev.includes(g.id) ? prev.filter(p => p !== g.id) : [...prev, g.id])} className={`bg-white p-5 rounded-[28px] border transition-all cursor-pointer flex items-center justify-between ${isSelected ? 'border-indigo-600 bg-indigo-50 shadow-md' : 'border-gray-100 shadow-sm'}`}>
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-200 text-transparent'}`}><i className="fas fa-check text-[10px]"></i></div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-black text-[#001D4A] text-sm truncate max-w-[220px]">{b.name}</p>
+                  <div key={g.id} onClick={() => setSelectedForPrint(prev => prev.includes(g.id) ? prev.filter(p => p !== g.id) : [...prev, g.id])} className={`bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-4 ${isSelected ? 'border-indigo-600 bg-indigo-50 shadow-md' : 'border-gray-100 shadow-sm'}`}>
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl shrink-0 flex items-center justify-center border-2 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-200 text-transparent'}`}><i className="fas fa-check text-[9px] sm:text-[10px]"></i></div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                          <p className="font-black text-[#001D4A] text-xs sm:text-sm truncate max-w-[200px] sm:max-w-[260px]">{b.name}</p>
                           {g.totalSeats > 1 && (
-                            <span className="text-[9px] font-black text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md uppercase">
+                            <span className="text-[8px] sm:text-[9px] font-black text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md uppercase">
                               Combined ({g.totalSeats} Seats)
                             </span>
                           )}
                         </div>
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter mt-0.5">
-                          Seats: <span className="text-indigo-900 font-black">{g.seatsList.join(', ')}</span> • {b.tourName || b.busNo} • Agent: {g.agentName} {g.agentPhone ? `(+880${g.agentPhone})` : ''}
+                        <p className="text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-tight mt-0.5 truncate">
+                          Seats: <span className="text-indigo-900 font-black">{g.seatsList.join(', ')}</span> • {b.tourName || b.busNo} • Agent: {g.agentName}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${g.totalDue <= 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                    <div className="self-end sm:self-center shrink-0">
+                      <span className={`px-2.5 py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider ${g.totalDue <= 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                         {g.totalDue <= 0 ? 'Paid' : `Due: ৳${g.totalDue}`}
                       </span>
                     </div>
@@ -997,71 +997,71 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* SUB-TAB 7: FOOD TOKENS (10 PER A4) */}
       {activeSubTab === 'food' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="bg-white p-6 md:p-8 rounded-[40px] shadow-sm border border-gray-100 flex flex-col gap-6">
-            <div className="flex justify-between items-center">
+        <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+          <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[40px] shadow-sm border border-gray-100 flex flex-col gap-4 sm:gap-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
                 <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-50 px-3 py-1 rounded-full">
                   A4 Batch Print Layout (10 Tokens / Page)
                 </span>
-                <h3 className="text-xl font-black text-[#001D4A] tracking-tighter uppercase mt-2">
+                <h3 className="text-lg sm:text-xl font-black text-[#001D4A] tracking-tighter uppercase mt-2 leading-tight">
                   খাবারের টোকেন প্রিন্ট (Food Token Wizard)
                 </h3>
                 <p className="text-gray-400 text-xs font-bold mt-0.5">
                   ১টি A4 পেজে ১০টি পরিচ্ছন্ন ফুড টোকেন প্রিন্ট হবে (2x5 Grid)
                 </p>
               </div>
-              <div className="flex gap-4">
+              <div className="flex gap-3">
                 <button onClick={() => setSelectedForPrint(filteredFoodBookings.map(b => b.id))} className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Select All</button>
                 <button onClick={() => setSelectedForPrint([])} className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Deselect All</button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Meal Period</label>
-                <select value={foodType} onChange={e => setFoodType(e.target.value as any)} className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-black text-[#001D4A] uppercase text-xs outline-none">
+                <select value={foodType} onChange={e => setFoodType(e.target.value as any)} className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-black text-[#001D4A] uppercase text-xs outline-none">
                   {['Breakfast', 'Lunch', 'Dinner', 'Special Item', 'Snacks', 'Refreshment'].map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Target Serving Time</label>
-                <input type="text" value={foodTime} onChange={e => setFoodTime(e.target.value)} className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-black text-orange-600 text-center text-sm outline-none" />
+                <input type="text" value={foodTime} onChange={e => setFoodTime(e.target.value)} className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-black text-orange-600 text-center text-xs sm:text-sm outline-none" />
               </div>
               <div className="md:col-span-2 space-y-1">
                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Food Menu / Description</label>
-                <input type="text" value={foodMenu} onChange={e => setFoodMenu(e.target.value)} placeholder="e.g. Rice, Chicken, Dal, Salad" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-[#001D4A] text-sm outline-none" />
+                <input type="text" value={foodMenu} onChange={e => setFoodMenu(e.target.value)} placeholder="e.g. Rice, Chicken, Dal, Salad" className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-gray-50 border-none rounded-xl sm:rounded-2xl font-bold text-[#001D4A] text-xs sm:text-sm outline-none" />
               </div>
             </div>
 
             <button
               onClick={handlePrintFoodTokens}
               disabled={selectedForPrint.length === 0}
-              className="w-full py-5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-black shadow-lg uppercase text-xs tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 sm:py-5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl sm:rounded-2xl font-black shadow-lg uppercase text-xs tracking-wider active:scale-95 transition-all flex items-center justify-center gap-2"
             >
               <i className="fas fa-print"></i>
               <span>টোকেন প্রিন্ট করুন ({selectedForPrint.length} টোকেন)</span>
             </button>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex gap-2 mb-4 px-1">
-              <select value={foodFilterTour} onChange={e => setFoodFilterTour(e.target.value)} className="flex-1 bg-white border border-gray-100 px-4 py-3 rounded-2xl text-[10px] font-black uppercase text-indigo-600">
+          <div className="space-y-2.5 sm:space-y-3">
+            <div className="flex gap-2 mb-3 sm:mb-4 px-1">
+              <select value={foodFilterTour} onChange={e => setFoodFilterTour(e.target.value)} className="flex-1 bg-white border border-gray-100 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase text-indigo-600 min-w-0">
                 <option value="">All Tours</option>
                 {tours.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
               </select>
-              <select value={foodFilterBooker} onChange={e => setFoodFilterBooker(e.target.value)} className="flex-1 bg-white border border-gray-100 px-4 py-3 rounded-2xl text-[10px] font-black uppercase text-indigo-600">
+              <select value={foodFilterBooker} onChange={e => setFoodFilterBooker(e.target.value)} className="flex-1 bg-white border border-gray-100 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase text-indigo-600 min-w-0">
                 <option value="">All Agents</option>
                 {agents.map(a => <option key={a.code} value={a.code}>{a.name}</option>)}
               </select>
             </div>
             {filteredFoodBookings.map(b => (
-              <div key={b.id} onClick={() => setSelectedForPrint(prev => prev.includes(b.id) ? prev.filter(p => p !== b.id) : [...prev, b.id])} className={`bg-white p-5 rounded-[28px] border transition-all cursor-pointer flex items-center justify-between ${selectedForPrint.includes(b.id) ? 'border-orange-500 bg-orange-50 shadow-md' : 'border-gray-100 shadow-sm'}`}>
-                <div className="flex items-center gap-4">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all ${selectedForPrint.includes(b.id) ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-200 text-transparent'}`}><i className="fas fa-check text-[10px]"></i></div>
-                  <div>
-                    <p className="font-black text-[#001D4A] text-sm uppercase leading-none">{b.name}</p>
-                    <p className="text-[9px] font-black text-orange-500 uppercase tracking-tighter mt-1">Seat {b.seatNo} • {b.tourName || b.busNo}</p>
+              <div key={b.id} onClick={() => setSelectedForPrint(prev => prev.includes(b.id) ? prev.filter(p => p !== b.id) : [...prev, b.id])} className={`bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-[28px] border transition-all cursor-pointer flex items-center justify-between gap-3 ${selectedForPrint.includes(b.id) ? 'border-orange-500 bg-orange-50 shadow-md' : 'border-gray-100 shadow-sm'}`}>
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl shrink-0 flex items-center justify-center border-2 transition-all ${selectedForPrint.includes(b.id) ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-200 text-transparent'}`}><i className="fas fa-check text-[9px] sm:text-[10px]"></i></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black text-[#001D4A] text-xs sm:text-sm uppercase leading-tight truncate">{b.name}</p>
+                    <p className="text-[8px] sm:text-[9px] font-black text-orange-500 uppercase tracking-tight mt-0.5 truncate">Seat {b.seatNo} • {b.tourName || b.busNo}</p>
                   </div>
                 </div>
               </div>
@@ -1072,39 +1072,39 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* SUB-TAB 8: NOTICES */}
       {activeSubTab === 'notices' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 flex flex-col gap-6 text-center">
-            <h3 className="text-xl font-black text-[#001D4A] tracking-tighter uppercase">Global Broadcast</h3>
+        <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+          <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[40px] shadow-sm border border-gray-100 flex flex-col gap-4 sm:gap-6 text-center">
+            <h3 className="text-lg sm:text-xl font-black text-[#001D4A] tracking-tighter uppercase">Global Broadcast</h3>
             <textarea 
               value={noticeContent}
               onChange={e => setNoticeContent(e.target.value)}
               placeholder="Type your important announcement here..."
-              className="w-full px-6 py-5 bg-gray-50 border-none rounded-3xl font-bold text-sm outline-none h-32 focus:ring-2 ring-indigo-500/20"
+              className="w-full px-4 py-3 sm:px-6 sm:py-5 bg-gray-50 border-none rounded-2xl sm:rounded-3xl font-bold text-xs sm:text-sm outline-none h-28 sm:h-32 focus:ring-2 ring-indigo-500/20"
             />
             <div className="flex gap-2 justify-center">
               {['info', 'success', 'error'].map(t => (
-                <button key={t} onClick={() => setNoticeType(t)} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest ${noticeType === t ? 'bg-[#001D4A] text-white' : 'bg-gray-100 text-gray-400'}`}>{t}</button>
+                <button key={t} onClick={() => setNoticeType(t)} className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[8px] font-black uppercase tracking-widest ${noticeType === t ? 'bg-[#001D4A] text-white' : 'bg-gray-100 text-gray-400'}`}>{t}</button>
               ))}
             </div>
-            <button onClick={handleNoticePost} className="w-full py-5 bg-[#001D4A] text-white rounded-2xl font-black shadow-lg uppercase text-xs tracking-widest active:scale-95 transition-all">Broadcast to All Agents</button>
+            <button onClick={handleNoticePost} className="w-full py-3.5 sm:py-5 bg-[#001D4A] text-white rounded-xl sm:rounded-2xl font-black shadow-lg uppercase text-xs tracking-wider active:scale-95 transition-all">Broadcast to All Agents</button>
           </div>
 
           {notices.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3">
               <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Active Broadcasts</h4>
               {notices.map(notice => (
-                <div key={notice.id} className="bg-white p-6 rounded-[32px] border border-gray-100 flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${notice.type === 'error' ? 'bg-red-50 text-red-500' : notice.type === 'success' ? 'bg-green-50 text-green-500' : 'bg-blue-50 text-blue-500'}`}>
-                      <i className="fas fa-bullhorn text-sm"></i>
+                <div key={notice.id} className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] border border-gray-100 flex items-center justify-between gap-3 group">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl shrink-0 flex items-center justify-center ${notice.type === 'error' ? 'bg-red-50 text-red-500' : notice.type === 'success' ? 'bg-green-50 text-green-500' : 'bg-blue-50 text-blue-500'}`}>
+                      <i className="fas fa-bullhorn text-xs sm:text-sm"></i>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-800">{notice.content}</p>
-                      <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Status: {notice.type}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-bold text-gray-800 break-words">{notice.content}</p>
+                      <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-0.5">Status: {notice.type}</p>
                     </div>
                   </div>
-                  <button onClick={() => onDeactivateNotice?.(notice.id)} className="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors">
-                    <i className="fas fa-times"></i>
+                  <button onClick={() => onDeactivateNotice?.(notice.id)} className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-50 text-gray-400 rounded-xl shrink-0 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors">
+                    <i className="fas fa-times text-xs"></i>
                   </button>
                 </div>
               ))}

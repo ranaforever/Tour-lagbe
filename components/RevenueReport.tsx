@@ -86,7 +86,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ buses, expenses, tours, i
          <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 relative overflow-hidden group transition-all">
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full -mr-10 -mt-10 opacity-40 transition-transform"></div>
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 relative z-10">Total Revenue</p>
-            <h4 className="text-3xl font-black text-green-600 relative z-10">৳{totalSales.toLocaleString()}</h4>
+            <h4 className="text-3xl font-black text-green-600 relative z-10">৳{(totalSales || 0).toLocaleString()}</h4>
             <div className="mt-4 flex items-center gap-2 relative z-10">
                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
                <span className="text-[9px] font-bold text-gray-400 uppercase">{filterTour ? 'Route Billing' : 'Gross Billing'}</span>
@@ -96,7 +96,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ buses, expenses, tours, i
          <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 relative overflow-hidden group transition-all">
             <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full -mr-10 -mt-10 opacity-40 transition-transform"></div>
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 relative z-10">Total Costs</p>
-            <h4 className="text-3xl font-black text-red-600 relative z-10">৳{totalExpenses.toLocaleString()}</h4>
+            <h4 className="text-3xl font-black text-red-600 relative z-10">৳{(totalExpenses || 0).toLocaleString()}</h4>
             <div className="mt-4 flex items-center gap-2 relative z-10">
                <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
                <span className="text-[9px] font-bold text-gray-400 uppercase">Operational Expenses</span>
@@ -107,7 +107,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ buses, expenses, tours, i
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 transition-transform"></div>
             <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1 relative z-10">Net Profit</p>
             <h4 className={`text-3xl font-black relative z-10 ${grossProfit >= 0 ? 'text-white' : 'text-red-400'}`}>
-               ৳{grossProfit.toLocaleString()}
+               ৳{(grossProfit || 0).toLocaleString()}
             </h4>
             <div className="mt-4 flex items-center gap-2 relative z-10">
                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
@@ -118,7 +118,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ buses, expenses, tours, i
          <div className="bg-orange-500 p-8 rounded-[40px] shadow-xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 transition-transform"></div>
             <p className="text-[10px] font-black text-white uppercase tracking-widest mb-1 relative z-10">Cash In-Hand</p>
-            <h4 className="text-3xl font-black text-white relative z-10">৳{netCashBalance.toLocaleString()}</h4>
+            <h4 className="text-3xl font-black text-white relative z-10">৳{(netCashBalance || 0).toLocaleString()}</h4>
             <div className="mt-4 flex items-center gap-2 relative z-10">
                <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
                <span className="text-[9px] font-bold text-white/60 uppercase">Current Balance</span>
@@ -138,7 +138,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ buses, expenses, tours, i
                   <div key={cat} className={`group ${filterTour && filterTour !== cat ? 'opacity-20 grayscale' : ''}`}>
                      <div className="flex justify-between text-[11px] font-black mb-2 uppercase tracking-widest">
                         <span className="text-gray-500 transition-colors">{cat}</span>
-                        <span className="text-indigo-600">৳{val.toLocaleString()}</span>
+                        <span className="text-indigo-600">৳{(val || 0).toLocaleString()}</span>
                      </div>
                      <div className="w-full bg-gray-50 h-2 rounded-full overflow-hidden border border-gray-100">
                         <div className="bg-indigo-600 h-full transition-all duration-700" style={{ width: `${(val/totalSales)*100}%` }}></div>
@@ -161,7 +161,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ buses, expenses, tours, i
                         <div className="flex items-center gap-2">
                           <span className="text-gray-800">{data.name}</span>
                         </div>
-                        <span className="text-blue-600">৳{data.amount.toLocaleString()}</span>
+                        <span className="text-blue-600">৳{(data.amount || 0).toLocaleString()}</span>
                      </div>
                      <div className="w-full bg-gray-50 h-2 rounded-full overflow-hidden border border-gray-100">
                         <div className="bg-blue-500 h-full transition-all duration-700" style={{ width: `${(data.amount/totalSales)*100}%` }}></div>
@@ -188,14 +188,14 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ buses, expenses, tours, i
                     </button>
                   )}
                 </div>
-                <span className="text-xs font-black text-red-500 bg-red-50 px-4 py-1 rounded-full uppercase">Total Category Costs: ৳{totalExpenses.toLocaleString()}</span>
+                <span className="text-xs font-black text-red-500 bg-red-50 px-4 py-1 rounded-full uppercase">Total Category Costs: ৳{(totalExpenses || 0).toLocaleString()}</span>
              </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
                {expenseByCategory.map(([cat, val]) => (
                   <div key={cat} className="group">
                      <div className="flex justify-between text-[11px] font-black mb-2 uppercase tracking-widest">
                         <span className="text-gray-500 transition-colors">{cat}</span>
-                        <span className="text-red-600">৳{val.toLocaleString()}</span>
+                        <span className="text-red-600">৳{(val || 0).toLocaleString()}</span>
                      </div>
                      <div className="w-full bg-gray-50 h-2 rounded-full overflow-hidden border border-gray-100">
                         <div className="bg-red-500 h-full transition-all duration-700" style={{ width: `${(val/totalExpenses)*100}%` }}></div>

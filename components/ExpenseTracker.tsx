@@ -233,7 +233,7 @@ const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ expenses, onSubmit, onD
                    </div>
                    
                    <div className="flex items-center gap-3 shrink-0">
-                      <p className="text-sm md:text-base font-black text-red-600">৳{ex.amount.toLocaleString()}</p>
+                      <p className="text-sm md:text-base font-black text-red-600">৳{(ex.amount || 0).toLocaleString()}</p>
                       
                       {isAdmin && (
                         <div className="flex items-center gap-1.5 ml-2">

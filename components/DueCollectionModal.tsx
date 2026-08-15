@@ -45,7 +45,7 @@ export const DueCollectionModal: React.FC<DueCollectionModalProps> = ({
       return;
     }
     if (amt > group.totalDue) {
-      setErrorMsg(`বকেয়ার চেয়ে বেশি গ্রহণ করা যাবে না (সর্বোচ্চ: ৳${group.totalDue.toLocaleString()})`);
+      setErrorMsg(`বকেয়ার চেয়ে বেশি গ্রহণ করা যাবে না (সর্বোচ্চ: ৳${(group.totalDue || 0).toLocaleString()})`);
       return;
     }
 
@@ -89,11 +89,11 @@ export const DueCollectionModal: React.FC<DueCollectionModalProps> = ({
           <div className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
             <div>
               <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">বর্তমান বকেয়া (Total Due)</span>
-              <span className="text-xl font-black text-rose-600">৳{group.totalDue.toLocaleString()}</span>
+              <span className="text-xl font-black text-rose-600">৳{(group.totalDue || 0).toLocaleString()}</span>
             </div>
             <div>
               <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">পূর্বের অগ্রিম (Paid)</span>
-              <span className="text-xl font-black text-emerald-600">৳{group.totalAdvance.toLocaleString()}</span>
+              <span className="text-xl font-black text-emerald-600">৳{(group.totalAdvance || 0).toLocaleString()}</span>
             </div>
           </div>
 
@@ -103,18 +103,18 @@ export const DueCollectionModal: React.FC<DueCollectionModalProps> = ({
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setPayAmount(group.totalDue.toString())}
+                onClick={() => setPayAmount((group.totalDue || 0).toString())}
                 className="flex-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-black uppercase transition-all"
               >
-                Full Due (৳{group.totalDue.toLocaleString()})
+                Full Due (৳{(group.totalDue || 0).toLocaleString()})
               </button>
               {group.totalDue > 500 && (
                 <button
                   type="button"
-                  onClick={() => setPayAmount(Math.round(group.totalDue / 2).toString())}
+                  onClick={() => setPayAmount(Math.round((group.totalDue || 0) / 2).toString())}
                   className="flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl text-xs font-black uppercase transition-all"
                 >
-                  Half (৳{Math.round(group.totalDue / 2).toLocaleString()})
+                  Half (৳{Math.round((group.totalDue || 0) / 2).toLocaleString()})
                 </button>
               )}
             </div>
