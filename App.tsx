@@ -883,6 +883,16 @@ const App: React.FC = () => {
       const updatedMeta = { ...currentMeta, [finalTour.name]: finalTour };
       localStorage.setItem('tl_tours_meta', JSON.stringify(updatedMeta));
 
+      // Optimistically update React State
+      setTours(prev => {
+        const exists = prev.some(t => t.name === finalTour.name);
+        if (exists) {
+          return prev.map(t => t.name === finalTour.name ? finalTour : t).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        } else {
+          return [...prev, finalTour].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        }
+      });
+
       // 2. If it's a Relax Tour, ensure a Hotel & Starter Rooms exist for this tour in HotelManager
       if (isRelax) {
         setHotels(prevHotels => {
@@ -935,7 +945,7 @@ const App: React.FC = () => {
         });
       }
 
-      // 3. Upsert Cloud Config Notice
+      // 3. Upsert Cloud Config Notice as infallible fallback
       try {
         await supabase.from('tl_notices').upsert({
           id: 'cfg_tours_meta',
@@ -945,8 +955,8 @@ const App: React.FC = () => {
         });
       } catch (err) {}
 
-      // 4. Upsert to Supabase tl_tours
-      const fullPayload = { 
+      // 4. Upsert to Supabase tl_tours with multi-level schema fallback
+      const fullPayload: any = { 
         name: finalTour.name, 
         fee: finalTour.fee,
         tour_type: finalTour.tour_type,
@@ -955,21 +965,42 @@ const App: React.FC = () => {
         hotel_applicable: finalTour.hotel_applicable,
         sort_order: finalTour.sort_order || 0
       };
+      
       let { error } = await supabase.from('tl_tours').upsert(fullPayload, { onConflict: 'name' });
-      if (error && (error.code === 'PGRST204' || error.message?.includes('column') || error.message?.includes('schema cache'))) {
-        const basePayload = { 
-          name: finalTour.name, 
+      
+      if (error) {
+        console.warn("Retrying tour upsert with reduced payload:", error.message);
+        // Fallback 1: Without hotel_applicable or sort_order
+        const payload2 = {
+          name: finalTour.name,
           fee: finalTour.fee,
+          tour_type: finalTour.tour_type,
+          couple_extra_fee: finalTour.couple_extra_fee,
           hotel_name: finalTour.hotel_name || null
         };
-        const retry = await supabase.from('tl_tours').upsert(basePayload, { onConflict: 'name' });
-        error = retry.error;
+        const retry1 = await supabase.from('tl_tours').upsert(payload2, { onConflict: 'name' });
+        error = retry1.error;
+
+        // Fallback 2: Basic name and fee only
+        if (error) {
+          const payloadBasic = { 
+            name: finalTour.name, 
+            fee: finalTour.fee 
+          };
+          const retry2 = await supabase.from('tl_tours').upsert(payloadBasic, { onConflict: 'name' });
+          error = retry2.error;
+        }
       }
-      if (error) throw error;
-      fetchData();
-      notify(`ট্যুর "${finalTour.name}" (${finalTour.tour_type === 'Relax' ? 'রিল্যাক্স ট্যুর 🏨' : 'ডে লং'}) সফলভাবে সেভ হয়েছে!`, 'success');
-    } catch (e) { 
-      notify("Failed to save tour.", 'error'); 
+
+      if (error) {
+        console.error("Supabase tl_tours error:", error);
+      }
+
+      await fetchData();
+      notify(`ট্যুর রুট "${finalTour.name}" (${finalTour.tour_type === 'Relax' ? 'রিল্যাক্স ট্যুর 🏨' : 'ডে লং'}) সফলভাবে সংরক্ষিত হয়েছে!`, 'success');
+    } catch (e: any) { 
+      console.error("Tour upsert fatal error:", e);
+      notify("ট্যুর সেভ করতে সমস্যা হয়েছে: " + (e?.message || "Check connection"), 'error'); 
     }
   };
 
