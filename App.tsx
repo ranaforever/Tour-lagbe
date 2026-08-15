@@ -132,7 +132,7 @@ const App: React.FC = () => {
       if (layoutNotice?.content) {
         try {
           const parsed = JSON.parse(layoutNotice.content);
-          if (parsed && typeof parsed.rows === 'number') {
+          if (parsed && (Array.isArray(parsed.rows) || typeof parsed.rows === 'object')) {
             currentBusLayout = parsed;
             setBusLayout(parsed);
             localStorage.setItem('tl_bus_layout', layoutNotice.content);
@@ -286,33 +286,55 @@ const App: React.FC = () => {
     return () => clearInterval(heartbeat);
   }, [authenticatedAgent]);
 
-  // Handle seat clicks on Bus Layout
+  // Handle seat clicks on Bus Layout (Real-time 5-minute seat locking for agents)
   const handleSeatClick = async (sid: string) => {
     const currentBus = buses[selectedBusIndex];
     if (!currentBus) return;
     const seat = currentBus.seats.find(s => s.id === sid);
 
     // If already booked, open details modal
-    if (seat?.isBooked) {
-      setEditingInfo(seat.bookingInfo!);
+    if (seat?.isBooked && seat.bookingInfo) {
+      setEditingInfo(seat.bookingInfo);
       setShowDetailModal(true);
       return;
     }
 
-    // If locked by another agent
-    if (seat?.lockInfo && seat.lockInfo.agent_code !== authenticatedAgent?.code) {
-      notify(`Seat taken by ${seat.lockInfo.agent_name}`, 'error');
+    // If temporarily locked by another agent (5 min hold)
+    if (seat?.lockInfo && seat.lockInfo.agent_code !== (authenticatedAgent?.code || 'GUEST')) {
+      notify(`⚠️ আসন ${sid} এজেন্ট ${seat.lockInfo.agent_name || 'অন্য এজেন্ট'} দ্বারা ৫ মিনিটের জন্য রিজার্ভড (Locked)`, 'error');
       return;
     }
 
-    // Toggle multi-seat selection
-    setSelectedSeatIds(prev => {
-      if (prev.includes(sid)) {
-        return prev.filter(id => id !== sid);
-      } else {
-        return [...prev, sid];
+    // Toggle multi-seat selection & live 5-minute lock
+    const isCurrentlySelected = selectedSeatIds.includes(sid);
+    if (isCurrentlySelected) {
+      // Deselect and release seat lock
+      setSelectedSeatIds(prev => prev.filter(id => id !== sid));
+      try {
+        await supabase.from('tl_locks')
+          .delete()
+          .eq('bus_no', currentBus.busId)
+          .eq('seat_no', sid);
+      } catch (e) {
+        console.error("Lock release error:", e);
       }
-    });
+    } else {
+      // Select and acquire 5-minute lock
+      const newSelected = [...selectedSeatIds, sid];
+      setSelectedSeatIds(newSelected);
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+      try {
+        await supabase.from('tl_locks').upsert({
+          bus_no: currentBus.busId,
+          seat_no: sid,
+          agent_code: authenticatedAgent?.code || 'GUEST',
+          agent_name: authenticatedAgent?.name || (isAdminAuthenticated ? 'Admin' : 'Agent'),
+          expires_at: expiresAt
+        });
+      } catch (e) {
+        console.error("Lock acquire error:", e);
+      }
+    }
   };
 
   // User clicks "Proceed to Book" with selected seats
@@ -326,42 +348,31 @@ const App: React.FC = () => {
 
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     try {
-      // Clear expired locks first
-      await supabase.from('tl_locks')
-        .delete()
-        .eq('bus_no', currentBus.busId)
-        .in('seat_no', seatsToBook)
-        .lt('expires_at', new Date().toISOString());
-
-      // Acquire locks for selected seats
+      // Refresh locks for selected seats
       const lockInserts = seatsToBook.map(sId => ({
         bus_no: currentBus.busId,
         seat_no: sId,
         agent_code: authenticatedAgent?.code || 'GUEST',
-        agent_name: authenticatedAgent?.name || 'Guest',
+        agent_name: authenticatedAgent?.name || (isAdminAuthenticated ? 'Admin' : 'Agent'),
         expires_at: expiresAt
       }));
 
       await supabase.from('tl_locks').upsert(lockInserts);
-      setSelectedSeatIds(seatsToBook);
-      setShowBookingModal(true);
-    } catch (e) {
-      notify("Securing seats for booking...", 'info');
-      setSelectedSeatIds(seatsToBook);
-      setShowBookingModal(true);
-    }
+    } catch (e) {}
+    
+    setSelectedSeatIds(seatsToBook);
+    setShowBookingModal(true);
   };
 
   const releaseLocks = async (busNo: string, seatIds: string[]) => {
-    if (!authenticatedAgent || seatIds.length === 0) return;
+    if (seatIds.length === 0) return;
     try {
       await supabase.from('tl_locks')
         .delete()
         .eq('bus_no', busNo)
-        .in('seat_no', seatIds)
-        .eq('agent_code', authenticatedAgent.code);
+        .in('seat_no', seatIds);
     } catch (e) {
-      console.error(e);
+      console.error("Release lock error:", e);
     }
     fetchData();
   };
@@ -1210,7 +1221,12 @@ const App: React.FC = () => {
                     onSeatClick={handleSeatClick}
                     selectedSeatIds={selectedSeatIds}
                     onProceedBooking={handleProceedBooking}
-                    onClearSelection={() => setSelectedSeatIds([])}
+                    onClearSelection={() => {
+                      if (buses[selectedBusIndex] && selectedSeatIds.length > 0) {
+                        releaseLocks(buses[selectedBusIndex].busId, selectedSeatIds);
+                      }
+                      setSelectedSeatIds([]);
+                    }}
                     layoutConfig={activeLayoutForSelectedBus}
                   />
                 </div>
@@ -1280,6 +1296,7 @@ const App: React.FC = () => {
               onDeactivateNotice={handleNoticeDeactivate}
               notify={notify}
               busLayout={busLayout}
+              busLayoutsByTour={busLayoutsByTour}
               onSaveBusLayout={handleSaveBusLayout}
               hotels={hotels}
               rooms={rooms}
@@ -1352,6 +1369,8 @@ const App: React.FC = () => {
       {showDetailModal && editingInfo && (
         <SeatDetailModal
           info={editingInfo}
+          allBookings={allBookings}
+          bookers={bookers}
           onClose={() => { setShowDetailModal(false); setEditingInfo(null); }}
           onEdit={() => {
             setShowDetailModal(false);

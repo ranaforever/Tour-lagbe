@@ -21,6 +21,7 @@ interface AdminPanelProps {
   notify?: (msg: string, type: 'success' | 'error' | 'info') => void;
   // Layout & Hotel Props
   busLayout: BusCustomLayout;
+  busLayoutsByTour?: Record<string, BusCustomLayout>;
   onSaveBusLayout: (layout: BusCustomLayout, applyToTour?: string) => void;
   hotels: Hotel[];
   rooms: HotelRoom[];
@@ -39,10 +40,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   agents, onUpsertAgent, onDeleteAgent,
   customerTypes, onUpsertCustomerType, onDeleteCustomerType,
   buses, notices = [], onDeactivateNotice, notify,
-  busLayout, onSaveBusLayout,
+  busLayout, busLayoutsByTour = {}, onSaveBusLayout,
   hotels, rooms, onAddHotel, onUpdateHotel, onDeleteHotel, onAddRoom, onUpdateRoom, onDeleteRoom, onAssignPassenger, onUnassignPassenger
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'tours' | 'agents' | 'types' | 'layout' | 'hotel' | 'print' | 'food' | 'notices' | 'database'>('tours');
+  const [layoutSelectedTour, setLayoutSelectedTour] = useState<string>(tours[0]?.name || '');
   const [copiedSql, setCopiedSql] = useState(false);
   
   const [newTour, setNewTour] = useState<{
@@ -290,34 +292,45 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   const qrData = `TOUR-LAGBE|TICKET:${g.id}|SEATS:${seatDisplay}|PRIMARY:${info.name}|PHONE:${info.mobile}`;
                   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(qrData)}`;
                   
+                  const isBigGroup = g.totalSeats > 4;
                   return `
                     <div class="ticket-card">
                       <!-- Ticket Header -->
-                      <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+                      <div class="flex justify-between items-center border-b border-gray-200 pb-1.5">
                         <div class="flex items-center gap-2">
                           <img src="${BUSINESS_INFO.logo}" class="h-8 object-contain" />
                           <div>
-                            <h1 class="font-black text-sm text-[#001D4A] tracking-tight leading-tight">${BUSINESS_INFO.name}</h1>
-                            <p class="text-[8px] font-black text-orange-600 uppercase tracking-wider leading-none mt-0.5">
+                            <h1 class="font-black text-xs text-[#001D4A] tracking-tight leading-tight">${BUSINESS_INFO.name}</h1>
+                            <p class="text-[7.5px] font-black text-orange-600 uppercase tracking-wider leading-none mt-0.5">
                               ${g.totalSeats > 1 ? `★ Combined Pass (${g.totalSeats} Seats)` : '★ Official Boarding Pass'}
                             </p>
                           </div>
                         </div>
-                        <div class="bg-[#001D4A] text-white px-3 py-1.5 rounded-xl flex flex-col items-center max-w-[46mm] shadow-sm">
-                          <span class="text-[7px] font-black uppercase tracking-widest opacity-80 leading-none mb-0.5">
-                            ${g.totalSeats > 1 ? `SEATS (${g.totalSeats})` : 'SEAT'}
+                        <div class="bg-[#001D4A] text-white px-2.5 py-1 rounded-xl flex flex-col items-center max-w-[50mm] shadow-sm text-center">
+                          <span class="text-[6.5px] font-black uppercase tracking-widest text-orange-300 leading-none mb-0.5">
+                            ${isBigGroup ? 'GROUP PASS' : (g.totalSeats > 1 ? `SEATS (${g.totalSeats})` : 'SEAT')}
                           </span>
-                          <span class="text-base font-black leading-none truncate max-w-full text-amber-300">${seatDisplay}</span>
+                          <span class="text-xs sm:text-sm font-black leading-tight text-amber-300 break-words whitespace-normal text-center">
+                            ${isBigGroup ? `${g.totalSeats} SEATS` : seatDisplay}
+                          </span>
                         </div>
                       </div>
 
+                      ${isBigGroup ? `
+                        <!-- Dedicated Allocated Seats Banner for > 4 Seats -->
+                        <div class="bg-[#001D4A] text-white px-2 py-1 rounded-lg flex items-center justify-between gap-1 my-1 border border-orange-400/30">
+                          <span class="text-[6.5px] font-black uppercase text-orange-300 whitespace-nowrap">ALLOCATED SEATS (${g.totalSeats}):</span>
+                          <span class="text-[8px] font-black text-amber-300 truncate max-w-[70mm] text-right font-mono">${seatDisplay}</span>
+                        </div>
+                      ` : ''}
+
                       <!-- Tour & Passenger Info -->
                       <div class="grid grid-cols-12 gap-2 my-auto py-1">
-                        <div class="col-span-8 space-y-1.5">
+                        <div class="col-span-8 space-y-1">
                           <div>
-                            <p class="text-[7px] font-black uppercase text-gray-400 tracking-wider leading-none">Primary Passenger</p>
-                            <p class="text-[14px] font-black text-gray-950 truncate leading-tight mt-0.5">${info.name}</p>
-                            <p class="text-[9px] font-bold text-gray-600 mt-0.5 flex items-center gap-1">
+                            <p class="text-[6.5px] font-black uppercase text-gray-400 tracking-wider leading-none">Primary Passenger</p>
+                            <p class="text-[13px] font-black text-gray-950 truncate leading-tight mt-0.5">${info.name}</p>
+                            <p class="text-[8.5px] font-bold text-gray-600 mt-0.5 flex items-center gap-1">
                               <span>+880${info.mobile}</span>
                               <span>•</span>
                               <span>${info.gender || 'MALE'}</span>
@@ -326,18 +339,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                           </div>
 
                           <div class="bg-indigo-50/70 p-1.5 rounded-lg border border-indigo-100/80">
-                            <p class="text-[7px] font-black uppercase text-indigo-500 tracking-wider leading-none">Tour Destination</p>
-                            <p class="text-[11px] font-black text-indigo-950 leading-tight truncate mt-0.5">${info.tourName || info.busNo}</p>
+                            <p class="text-[6.5px] font-black uppercase text-indigo-500 tracking-wider leading-none">Tour Destination</p>
+                            <p class="text-[10.5px] font-black text-indigo-950 leading-tight truncate mt-0.5">${info.tourName || info.busNo}</p>
                           </div>
 
-                          <div class="flex gap-4 pt-0.5">
+                          <div class="flex gap-2 pt-0.5">
                             <div class="bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200/60 flex-1">
-                              <p class="text-[7px] font-black uppercase text-emerald-700 leading-none">Total Paid</p>
-                              <p class="text-[12px] font-black text-emerald-700 leading-none mt-0.5">৳${(g.totalAdvance || 0).toLocaleString()}</p>
+                              <p class="text-[6.5px] font-black uppercase text-emerald-700 leading-none">Total Paid</p>
+                              <p class="text-[11px] font-black text-emerald-700 leading-none mt-0.5">৳${(g.totalAdvance || 0).toLocaleString()}</p>
                             </div>
                             <div class="bg-rose-50 px-2 py-1 rounded-md border border-rose-200/60 flex-1">
-                              <p class="text-[7px] font-black uppercase text-rose-700 leading-none">Total Due</p>
-                              <p class="text-[12px] font-black text-rose-700 leading-none mt-0.5">৳${(g.totalDue || 0).toLocaleString()}</p>
+                              <p class="text-[6.5px] font-black uppercase text-rose-700 leading-none">Total Due</p>
+                              <p class="text-[11px] font-black text-rose-700 leading-none mt-0.5">৳${(g.totalDue || 0).toLocaleString()}</p>
                             </div>
                           </div>
                         </div>
@@ -345,27 +358,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                         <!-- QR Code & ID -->
                         <div class="col-span-4 flex flex-col items-center justify-center pl-1 border-l border-dashed border-gray-200">
                           <div class="p-1 bg-white rounded-lg border border-gray-200 shadow-sm">
-                            <img src="${qrCodeUrl}" class="w-16 h-16 object-contain" />
+                            <img src="${qrCodeUrl}" class="w-15 h-15 object-contain" />
                           </div>
-                          <p class="text-[8px] text-gray-600 font-black mt-1 uppercase tracking-wider">ID: ${g.id.slice(0, 8)}</p>
-                          <span class="text-[6px] font-bold text-gray-400">Scan for Verification</span>
+                          <p class="text-[7.5px] text-gray-600 font-black mt-1 uppercase tracking-wider">ID: ${g.id.slice(0, 8)}</p>
+                          <span class="text-[6px] font-bold text-gray-400">Official Pass</span>
                         </div>
                       </div>
 
                       <!-- Ticket Footer -->
                       <div class="flex justify-between items-center pt-1.5 border-t border-dashed border-gray-200">
-                        <div class="text-[8px] font-bold text-gray-600 leading-snug">
+                        <div class="text-[7.5px] font-bold text-gray-600 leading-snug">
                           <p class="font-extrabold text-gray-900">
                             Booker: <span class="text-indigo-900">${g.agentName}</span> ${g.agentPhone ? `<span class="text-gray-500 font-semibold">(+880${g.agentPhone})</span>` : ''}
                           </p>
-                          <p class="text-[7px] text-gray-400 mt-0.5">Issue Date: ${new Date(info.bookingDate).toLocaleDateString()}</p>
+                          <p class="text-[6.5px] text-gray-400 mt-0.5">Issue Date: ${new Date(info.bookingDate).toLocaleDateString()}</p>
                         </div>
-                        <span class="px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider ${
-                          g.totalDue <= 0 
+                        <span class="px-2.5 py-1 rounded-lg text-[7.5px] font-black uppercase tracking-wider ${
+                          (g.totalFees > 0 && g.totalAdvance >= g.totalFees && g.totalDue <= 0)
                             ? 'bg-emerald-600 text-white shadow-sm' 
-                            : 'bg-amber-500 text-white shadow-sm'
+                            : (g.totalAdvance === 0 ? 'bg-rose-600 text-white shadow-sm' : 'bg-amber-500 text-white shadow-sm')
                         }">
-                          ${g.totalDue <= 0 ? '✓ PAID FULL' : '⚠ PARTIAL DUE'}
+                          ${(g.totalFees > 0 && g.totalAdvance >= g.totalFees && g.totalDue <= 0) ? '✓ PAID FULL' : (g.totalAdvance === 0 ? '⚠ UNPAID DUE' : '⚠ PARTIAL DUE')}
                         </span>
                       </div>
                     </div>
@@ -398,7 +411,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         <head>
           <title>10-Tokens per A4 - Tour লাগবে</title>
           <script src="https://cdn.tailwindcss.com"></script>
-          <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700;800&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+          <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700;800;900&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
           <style>
             @page { 
               size: A4 portrait; 
@@ -428,7 +441,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               width: 105mm;
               height: 59.4mm;
               border: 0.5pt dashed #cbd5e1; 
-              padding: 4.5mm 6mm; 
+              padding: 3.5mm 5mm; 
               display: flex; 
               flex-direction: column; 
               justify-content: space-between;
@@ -439,9 +452,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             }
             .token-watermark {
               position: absolute;
-              font-size: 32px;
+              font-size: 28px;
               font-weight: 900;
-              color: rgba(249, 115, 22, 0.04);
+              color: rgba(249, 115, 22, 0.05);
               z-index: 0;
               pointer-events: none;
               white-space: nowrap;
@@ -461,40 +474,47 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   <div class="token-card">
                     <div class="token-watermark">🍽️ ${foodType.toUpperCase()}</div>
                     
-                    <!-- Token Header -->
-                    <div class="relative z-10 flex justify-between items-center border-b border-gray-200 pb-1.5">
+                    <!-- Token Header - Enhanced Font Sizes -->
+                    <div class="relative z-10 flex justify-between items-center border-b border-gray-200 pb-1">
                       <div class="flex items-center gap-2">
                         <img src="${BUSINESS_INFO.logo}" class="h-6 object-contain" />
                         <div>
-                          <span class="text-[10px] font-black text-[#001D4A] uppercase tracking-tight leading-none block">${BUSINESS_INFO.name}</span>
-                          <span class="text-[8px] font-black text-orange-600 uppercase tracking-wider leading-none mt-0.5 block">🍽️ ${foodType} Token</span>
+                          <span class="text-[11px] font-black text-[#001D4A] uppercase tracking-tight leading-none block">${BUSINESS_INFO.name}</span>
+                          <span class="text-[9px] font-black text-orange-600 uppercase tracking-wider leading-none mt-0.5 block">🍽️ ${foodType} Token</span>
                         </div>
                       </div>
                       <div class="bg-[#001D4A] text-white px-3 py-1 rounded-xl flex items-center gap-1.5 shadow-sm">
-                        <span class="text-[7px] font-black uppercase opacity-75 leading-none">SEAT</span>
-                        <span class="text-sm font-black leading-none text-amber-300">${info.seatNo}</span>
+                        <span class="text-[8px] font-black uppercase text-orange-300 leading-none">SEAT</span>
+                        <span class="text-base font-black leading-none text-amber-300">${info.seatNo}</span>
                       </div>
                     </div>
 
-                    <!-- Passenger & Meal Info -->
-                    <div class="relative z-10 flex justify-between items-center py-1">
+                    <!-- Passenger & Meal Info - Larger & Clearer -->
+                    <div class="relative z-10 flex justify-between items-center py-0.5">
                       <div class="max-w-[155px]">
-                        <p class="text-[12px] font-black text-gray-950 truncate leading-tight">${info.name}</p>
-                        <p class="text-[8px] font-extrabold text-indigo-900 mt-0.5 truncate">${info.tourName || info.busNo}</p>
+                        <p class="text-[13px] font-black text-gray-950 truncate leading-tight">${info.name}</p>
+                        <p class="text-[9.5px] font-extrabold text-indigo-900 mt-0.5 truncate">${info.tourName || info.busNo}</p>
                       </div>
-                      <div class="text-right bg-orange-50/80 px-2 py-1 rounded-lg border border-orange-200/60">
-                        <span class="text-[7px] font-black text-orange-600 uppercase block leading-none">Serving Time</span>
-                        <span class="text-[11px] font-black text-orange-700 leading-none mt-0.5 block">${foodTime}</span>
+                      <div class="text-right bg-orange-50/90 px-2.5 py-1 rounded-lg border border-orange-200">
+                        <span class="text-[7.5px] font-black text-orange-600 uppercase block leading-none">Serving Time</span>
+                        <span class="text-[12px] font-black text-orange-700 leading-none mt-0.5 block">${foodTime}</span>
                       </div>
                     </div>
 
-                    <!-- Token Footer / Menu -->
+                    <!-- Token Menu & 1 Person -->
                     <div class="relative z-10 flex justify-between items-center pt-1 border-t border-dashed border-gray-200">
-                      <div class="truncate max-w-[185px]">
-                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Menu:</span>
-                        <span class="text-[8px] font-bold text-gray-700">${foodMenu}</span>
+                      <div class="truncate max-w-[170px]">
+                        <span class="text-[8px] font-black text-gray-400 uppercase mr-1">Menu:</span>
+                        <span class="text-[9.5px] font-bold text-gray-800">${foodMenu}</span>
                       </div>
-                      <span class="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[7px] font-black uppercase">1 Person</span>
+                      <span class="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[7.5px] font-black uppercase">1 Person</span>
+                    </div>
+
+                    <!-- Mandatory Red Warning Note -->
+                    <div class="relative z-10 pt-0.5 mt-0.5 border-t border-red-200 text-center">
+                      <p class="text-[7.5px] font-black text-red-600 uppercase tracking-tight leading-none">
+                        ⚠️ You have to pay, If you ordered out the selected Items
+                      </p>
                     </div>
                   </div>
                 `).join('')}
@@ -722,6 +742,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                             🏨 {t.hotel_name}
                           </span>
                         )}
+                        <button
+                          onClick={() => { setLayoutSelectedTour(t.name); setActiveSubTab('layout'); }}
+                          className="text-[8.5px] font-black bg-orange-50 hover:bg-orange-100 text-orange-900 border border-orange-200/80 px-2 py-0.5 rounded-md flex items-center gap-1 transition-all"
+                          title="এই ট্যুরের বাস লেআউট পরিবর্তন করুন"
+                        >
+                          <i className="fas fa-bus text-[8px] text-orange-500"></i>
+                          <span>{busLayoutsByTour[t.name]?.name || 'Standard 45 Seats'}</span>
+                          <span className="text-[7.5px] text-orange-600 underline font-bold">এডিট</span>
+                        </button>
                       </div>
                       <div className="flex items-center gap-3 sm:gap-4 mt-1 flex-wrap">
                         <p className="text-[9px] sm:text-[10px] font-black text-indigo-600">Base Fee: ৳{(t.fee || 0).toLocaleString()}</p>
@@ -768,8 +797,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         <div className="animate-in fade-in duration-300">
           <BusLayoutEditor
             currentLayout={busLayout}
+            busLayoutsByTour={busLayoutsByTour}
             tours={tours}
-            selectedTour={tours[0]?.name || ''}
+            selectedTour={layoutSelectedTour}
             onSaveLayout={onSaveBusLayout}
             notify={notify}
           />

@@ -24,8 +24,10 @@ const Seat: React.FC<SeatProps> = ({ data, isSelected = false, selectionIndex, o
       return 'bg-gradient-to-br from-amber-500 to-orange-600 text-white ring-4 ring-orange-400/50 shadow-xl shadow-orange-500/40 scale-105 z-20';
     }
 
-    // Priority 2: Temporary Lock (Gray Pulse)
-    if (data.lockInfo) return 'bg-gray-400 shadow-gray-200 animate-pulse cursor-not-allowed text-white';
+    // Priority 2: Temporary Lock by Agent (Gray Color - 5 min reservation)
+    if (data.lockInfo) {
+      return 'bg-gray-400 text-white shadow-md shadow-gray-300 ring-2 ring-gray-300/80 cursor-not-allowed hover:bg-gray-500 opacity-95';
+    }
     
     // Priority 3: Confirmed Booking
     if (data.isBooked && data.bookingInfo) {
@@ -44,15 +46,25 @@ const Seat: React.FC<SeatProps> = ({ data, isSelected = false, selectionIndex, o
   };
 
   const displayName = data.label || data.id;
+  const isLocked = Boolean(data.lockInfo && !data.isBooked);
 
   return (
     <div className="relative">
       <button
         onClick={(e) => { e.stopPropagation(); onClick(); }}
         className={`${getSeatColor()} w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-[10px] sm:rounded-[12px] md:rounded-2xl flex flex-col items-center justify-center text-[10px] sm:text-[11px] md:text-[13px] font-black transition-all duration-200 shadow-md md:shadow-lg transform active:scale-95 relative`}
-        title={data.isBooked ? `Booked: ${data.bookingInfo?.name || ''} (${data.id})` : `Seat ${data.id}`}
+        title={
+          data.isBooked 
+            ? `Booked: ${data.bookingInfo?.name || ''} (${data.id})` 
+            : (isLocked ? `Locked by ${data.lockInfo?.agent_name || 'Agent'} (5 min hold)` : `Seat ${data.id}`)
+        }
       >
         <span>{displayName}</span>
+        {isLocked && (
+          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-gray-700 text-white rounded-full flex items-center justify-center text-[7px] sm:text-[8px] shadow">
+            <i className="fas fa-lock"></i>
+          </span>
+        )}
         {isSelected && typeof selectionIndex === 'number' && (
           <span className="absolute -top-1.5 -right-1.5 w-4 h-4 md:w-5 md:h-5 bg-white text-orange-600 rounded-full text-[8px] sm:text-[9px] md:text-[10px] font-black flex items-center justify-center shadow-md border border-orange-200">
             {selectionIndex + 1}

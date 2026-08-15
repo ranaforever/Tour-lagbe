@@ -29,15 +29,19 @@ const BusLayout: React.FC<BusLayoutProps> = ({
   const rearRow = layoutConfig.rearRowLetter || 'K';
 
   const bookedCount = seats.filter(s => s.isBooked).length;
-  const availableCount = seats.filter(s => !s.isBooked && !s.isDisabled).length;
+  const lockedCount = seats.filter(s => !s.isBooked && s.lockInfo).length;
+  const availableCount = seats.filter(s => !s.isBooked && !s.isDisabled && !s.lockInfo).length;
 
   return (
     <div className="flex flex-col items-center w-full max-w-[500px]">
       {/* Bus Top Frame & Controls */}
-      <div className="w-full mb-3 flex items-center justify-between px-3 text-[10px] font-black uppercase text-gray-500">
-        <div className="flex items-center gap-3">
+      <div className="w-full mb-3 flex flex-wrap items-center justify-between gap-2 px-3 text-[10px] font-black uppercase text-gray-500">
+        <div className="flex items-center flex-wrap gap-2.5 sm:gap-3">
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Available ({availableCount})</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Booked ({bookedCount})</span>
+          {lockedCount > 0 && (
+            <span className="flex items-center gap-1.5 text-gray-600 font-black"><span className="w-2.5 h-2.5 rounded-full bg-gray-400"></span> Locked ({lockedCount})</span>
+          )}
         </div>
         {safeSelected.length > 0 && (
           <button 

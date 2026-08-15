@@ -4,6 +4,7 @@ import { BUS_LAYOUT_PRESETS, DEFAULT_BUS_LAYOUT } from '../constants';
 
 interface BusLayoutEditorProps {
   currentLayout: BusCustomLayout;
+  busLayoutsByTour?: Record<string, BusCustomLayout>;
   tours: Tour[];
   selectedTour: string;
   onSaveLayout: (layout: BusCustomLayout, applyToTour?: string) => void;
@@ -12,19 +13,40 @@ interface BusLayoutEditorProps {
 
 const BusLayoutEditor: React.FC<BusLayoutEditorProps> = ({
   currentLayout,
+  busLayoutsByTour = {},
   tours,
   selectedTour,
   onSaveLayout,
   notify
 }) => {
-  const [layout, setLayout] = useState<BusCustomLayout>({
-    ...DEFAULT_BUS_LAYOUT,
-    ...currentLayout,
-    disabledSeats: currentLayout?.disabledSeats || [],
-    customLabels: currentLayout?.customLabels || {}
-  });
+  const [applyTour, setApplyTour] = useState<string>(selectedTour || (tours[0]?.name || ''));
 
-  const [applyTour, setApplyTour] = useState<string>(selectedTour || '');
+  const getInitialLayoutForTour = (tourName: string): BusCustomLayout => {
+    if (tourName && busLayoutsByTour[tourName]) {
+      return {
+        ...DEFAULT_BUS_LAYOUT,
+        ...busLayoutsByTour[tourName],
+        disabledSeats: busLayoutsByTour[tourName]?.disabledSeats || [],
+        customLabels: busLayoutsByTour[tourName]?.customLabels || {}
+      };
+    }
+    return {
+      ...DEFAULT_BUS_LAYOUT,
+      ...currentLayout,
+      disabledSeats: currentLayout?.disabledSeats || [],
+      customLabels: currentLayout?.customLabels || {}
+    };
+  };
+
+  const [layout, setLayout] = useState<BusCustomLayout>(() => getInitialLayoutForTour(selectedTour || (tours[0]?.name || '')));
+
+  // Switch active tour in editor
+  const handleSelectTour = (tourName: string) => {
+    setApplyTour(tourName);
+    const tourLayout = getInitialLayoutForTour(tourName);
+    setLayout(tourLayout);
+  };
+
   const [editingSeatId, setEditingSeatId] = useState<string | null>(null);
   const [customLabelInput, setCustomLabelInput] = useState<string>('');
 
@@ -33,10 +55,11 @@ const BusLayoutEditor: React.FC<BusLayoutEditorProps> = ({
   const handleApplyPreset = (preset: BusCustomLayout) => {
     setLayout({
       ...preset,
+      tourName: applyTour || undefined,
       disabledSeats: [],
       customLabels: {}
     });
-    notify?.(`Applied preset: ${preset.name}`, 'info');
+    notify?.(`Applied preset "${preset.name}" for ${applyTour || 'Global Default'}`, 'info');
   };
 
   const handleLeftColsChange = (cols: number) => {
@@ -104,7 +127,7 @@ const BusLayoutEditor: React.FC<BusLayoutEditorProps> = ({
           </span>
           <h3 className="text-2xl font-black text-[#001D4A] mt-2">বাস সিট লেআউট এডিটর (Bus Layout Editor)</h3>
           <p className="text-gray-400 text-xs font-bold mt-1">
-            আপনার বাসের সারি, কলাম, পেছনের সিট এবং খালি জায়গা প্রয়োজনমতো কাস্টমাইজ করুন।
+            নির্দিষ্ট ট্যুরের জন্য বাস লেআউট ও সিট প্ল্যান কাস্টমাইজ করুন। এটি স্থায়ীভাবে সেই ট্যুরের সাথে যুক্ত থাকবে।
           </p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -113,9 +136,43 @@ const BusLayoutEditor: React.FC<BusLayoutEditorProps> = ({
             className="w-full md:w-auto px-6 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
           >
             <i className="fas fa-save"></i>
-            <span>লেআউট সংরক্ষণ করুন (Save Layout)</span>
+            <span>{applyTour ? `"${applyTour}" লেআউট সেভ করুন` : 'গ্লোবাল লেআউট সেভ করুন'}</span>
           </button>
         </div>
+      </div>
+
+      {/* Tour Selector Ribbon */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-2 overflow-x-auto">
+        <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider whitespace-nowrap pl-1 pr-2">
+          🎯 সিলেক্টেড ট্যুর:
+        </span>
+        <button
+          onClick={() => handleSelectTour('')}
+          className={`px-3 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider whitespace-nowrap transition-all ${
+            applyTour === ''
+              ? 'bg-[#001D4A] text-white shadow-md'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          🌐 Global Default
+        </button>
+        {tours.map(t => (
+          <button
+            key={t.name}
+            onClick={() => handleSelectTour(t.name)}
+            className={`px-3.5 py-1.5 rounded-xl font-black text-xs whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              applyTour === t.name
+                ? 'bg-orange-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <i className="fas fa-bus text-[10px]"></i>
+            <span>{t.name}</span>
+            {busLayoutsByTour[t.name] && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            )}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -172,11 +229,11 @@ const BusLayoutEditor: React.FC<BusLayoutEditorProps> = ({
               {/* Target Tour */}
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                  Apply To Tour
+                  Apply To Selected Tour
                 </label>
                 <select
                   value={applyTour}
-                  onChange={(e) => setApplyTour(e.target.value)}
+                  onChange={(e) => handleSelectTour(e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-xs font-black text-indigo-700 uppercase outline-none"
                 >
                   <option value="">All Tours (Global Default)</option>
