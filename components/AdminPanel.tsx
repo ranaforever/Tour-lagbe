@@ -1269,7 +1269,7 @@ CREATE TABLE tl_notices (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Step 10: Disable Row Level Security (RLS) or enable public access for seamless agent operations
+-- Step 10: Completely Disable Row Level Security (RLS) on all tables
 ALTER TABLE tl_bookings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE tl_tours DISABLE ROW LEVEL SECURITY;
 ALTER TABLE tl_agents DISABLE ROW LEVEL SECURITY;
@@ -1278,14 +1278,36 @@ ALTER TABLE tl_locks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE tl_expenses DISABLE ROW LEVEL SECURITY;
 ALTER TABLE tl_notices DISABLE ROW LEVEL SECURITY;
 
--- Step 11: Seed Initial Agents & Admin
+-- Step 11: Create Permissive Full-Access Policies (backup in case RLS is re-enabled)
+DROP POLICY IF EXISTS "Public full access tl_bookings" ON tl_bookings;
+CREATE POLICY "Public full access tl_bookings" ON tl_bookings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access tl_tours" ON tl_tours;
+CREATE POLICY "Public full access tl_tours" ON tl_tours FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access tl_agents" ON tl_agents;
+CREATE POLICY "Public full access tl_agents" ON tl_agents FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access tl_customer_types" ON tl_customer_types;
+CREATE POLICY "Public full access tl_customer_types" ON tl_customer_types FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access tl_locks" ON tl_locks;
+CREATE POLICY "Public full access tl_locks" ON tl_locks FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access tl_expenses" ON tl_expenses;
+CREATE POLICY "Public full access tl_expenses" ON tl_expenses FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access tl_notices" ON tl_notices;
+CREATE POLICY "Public full access tl_notices" ON tl_notices FOR ALL USING (true) WITH CHECK (true);
+
+-- Step 12: Seed Initial Agents & Admin
 INSERT INTO tl_agents (code, name, phone) VALUES
   ('ADMIN', 'Super Admin (Head Office)', '01800000000'),
   ('AGENT1', 'Agent Masud Rana', '01625989806'),
   ('AGENT2', 'Agent Rafiq', '01711111111')
 ON CONFLICT (code) DO NOTHING;
 
--- Step 12: Seed Initial Tours
+-- Step 13: Seed Initial Tours
 INSERT INTO tl_tours (name, fee, tour_type, couple_extra_fee, hotel_applicable, hotel_name, sort_order) VALUES
   ('COX RELEX TOUR', 4500, 'Relax', 1000, true, 'Segul Resort Cox', 1),
   ('SAJEK VALLEY TOUR', 5200, 'Relax', 1200, true, 'Resort RungRang', 2),

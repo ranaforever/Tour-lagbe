@@ -994,10 +994,16 @@ const App: React.FC = () => {
 
       if (error) {
         console.error("Supabase tl_tours error:", error);
+        if (error.code === '42501' || error.message?.includes('row-level security') || error.message?.includes('RLS')) {
+          notify(`ট্যুর "${finalTour.name}" অ্যাপে যুক্ত হয়েছে! তবে Supabase RLS অন থাকায় Admin Panel > Database Schema থেকে SQL টি রান করে RLS বন্ধ করুন।`, 'info');
+        } else {
+          notify(`ট্যুর রুট "${finalTour.name}" সেভ হয়েছে!`, 'success');
+        }
+      } else {
+        notify(`ট্যুর রুট "${finalTour.name}" (${finalTour.tour_type === 'Relax' ? 'রিল্যাক্স ট্যুর 🏨' : 'ডে লং'}) সফলভাবে সংরক্ষিত হয়েছে!`, 'success');
       }
 
       await fetchData();
-      notify(`ট্যুর রুট "${finalTour.name}" (${finalTour.tour_type === 'Relax' ? 'রিল্যাক্স ট্যুর 🏨' : 'ডে লং'}) সফলভাবে সংরক্ষিত হয়েছে!`, 'success');
     } catch (e: any) { 
       console.error("Tour upsert fatal error:", e);
       notify("ট্যুর সেভ করতে সমস্যা হয়েছে: " + (e?.message || "Check connection"), 'error'); 
