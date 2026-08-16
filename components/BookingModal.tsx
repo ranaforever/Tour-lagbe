@@ -55,10 +55,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
     religion: existingData?.religion || Religion.MUSLIM,
     tourName: existingData?.tourName || busNo,
     customerType: existingData?.customerType || defaultType,
+    customExtraFee: existingData?.customExtraFee || 0,
     discountAmount: existingData?.discountAmount || 0,
     advanceAmount: existingData?.advanceAmount || 0,
     bookerCode: existingData?.bookerCode || (isAdmin ? 'ADMIN' : (currentAgentCode || ''))
   });
+
+  const [enableCustomExtra, setEnableCustomExtra] = useState(Boolean(existingData?.customExtraFee && existingData.customExtraFee > 0));
 
   // Co-Passengers State (Default religion: Muslim for every co-passenger!)
   const [coPassengers, setCoPassengers] = useState<Record<string, CoPassengerInput>>(() => {
@@ -129,11 +132,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
 
     // 4. Financial Calculations for ALL selected seats
-    const gross = (fee * activeSeatIds.length) + cFee;
+    const extraFee = enableCustomExtra ? (primaryData.customExtraFee || 0) : 0;
+    const gross = (fee * activeSeatIds.length) + cFee + extraFee;
     setTotalGross(gross);
     const due = gross - primaryData.discountAmount - primaryData.advanceAmount - addPayment;
     setDueAmount(due);
-  }, [primaryData, tours, bookers, customerTypes, addPayment, isAdmin, activeSeatIds.length, currentTour, isRelaxTour, coupleExtraFee]);
+  }, [primaryData, tours, bookers, customerTypes, addPayment, isAdmin, activeSeatIds.length, currentTour, isRelaxTour, coupleExtraFee, enableCustomExtra]);
 
   const handlePrimaryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     if (!canEdit) return;
@@ -191,6 +195,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     const bookingsToSubmit: BookingInfo[] = [];
 
     // 1. Primary Booking Record
+    const extraFeeAmount = enableCustomExtra ? (primaryData.customExtraFee || 0) : 0;
     const primaryBooking: BookingInfo = {
       id: primaryId,
       name: primaryData.name.trim(),
@@ -201,7 +206,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       tourName: primaryData.tourName,
       tourFees: tourPerSeatFee,
       customerType: primaryData.customerType,
-      customerTypeFees: categoryFee,
+      customerTypeFees: categoryFee + extraFeeAmount,
+      customExtraFee: extraFeeAmount,
       discountAmount: primaryData.discountAmount,
       advanceAmount: primaryData.advanceAmount + addPayment,
       dueAmount: dueAmount,
@@ -523,6 +529,62 @@ const BookingModal: React.FC<BookingModalProps> = ({
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Custom Extra Fee Option (কাস্টম অতিরিক্ত ফি) */}
+                  <div className="space-y-2 pt-0.5">
+                    <div 
+                      onClick={() => {
+                        const nextState = !enableCustomExtra;
+                        setEnableCustomExtra(nextState);
+                        if (!nextState) {
+                          setPrimaryData(prev => ({ ...prev, customExtraFee: 0 }));
+                        }
+                      }}
+                      className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${enableCustomExtra ? 'bg-indigo-50/90 border-indigo-300 ring-2 ring-indigo-200/50' : 'bg-white border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${enableCustomExtra ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 bg-gray-50 text-transparent'}`}>
+                          <i className="fas fa-check text-[10px]"></i>
+                        </div>
+                        <div>
+                          <span className="text-xs font-black text-[#001D4A] block">
+                            Custom Extra (কাস্টম অতিরিক্ত ফি)
+                          </span>
+                          <span className="text-[9px] text-gray-400 font-bold block leading-tight">
+                            বিশেষ সুবিধা / অতিরিক্ত চার্জ যুক্ত করুন
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase ${enableCustomExtra ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-400'}`}>
+                        {enableCustomExtra ? 'Enabled' : '+ Add'}
+                      </span>
+                    </div>
+
+                    {enableCustomExtra && (
+                      <div className="p-3.5 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl border border-indigo-200 animate-in fade-in zoom-in-95 duration-200 space-y-1.5 shadow-sm">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] font-black text-indigo-900 uppercase tracking-widest flex items-center gap-1">
+                            <i className="fas fa-plus-circle text-indigo-600"></i>
+                            অতিরিক্ত ফি ইনপুট (Extra Amount ৳)
+                          </label>
+                          <span className="text-[8.5px] font-extrabold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded">মোট টাকায় যোগ হবে</span>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-indigo-800 text-base">৳</span>
+                          <input 
+                            type="number" 
+                            inputMode="numeric"
+                            name="customExtraFee"
+                            value={primaryData.customExtraFee || ''}
+                            onChange={handleNumericChange}
+                            placeholder="যেমন: ৫০০"
+                            className="w-full pl-8 pr-4 py-2.5 bg-white border border-indigo-300 rounded-xl font-black text-base text-indigo-950 outline-none focus:ring-2 focus:ring-indigo-400 shadow-inner"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {isRelaxTour && coupleExtraFee > 0 && (

@@ -52,6 +52,8 @@ export interface BookingInfo {
   hotelName?: string;
   hotelRoomNo?: string;
   hotelRoomType?: string;
+  // Custom Extra Fee
+  customExtraFee?: number;
 }
 
 export interface SeatLock {

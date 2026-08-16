@@ -101,6 +101,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     agentName: string;
     agentCode: string;
     agentPhone: string;
+    hotelName?: string;
+    hotelRoomNo?: string;
+    hotelRoomType?: string;
   }
 
   const groupedTickets = useMemo(() => {
@@ -122,6 +125,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       const due = bookings.reduce((sum, b) => sum + (b.dueAmount || 0), 0);
       const fees = bookings.reduce((sum, b) => sum + (b.tourFees + (b.customerTypeFees || 0)), 0);
       const ag = agents.find(a => a.code.toUpperCase() === lead.bookerCode.toUpperCase() || a.name.toLowerCase() === lead.bookedBy.toLowerCase());
+      const hotelName = lead.hotelName || bookings.find(b => b.hotelName)?.hotelName || '';
+      const hotelRoomNo = lead.hotelRoomNo || bookings.find(b => b.hotelRoomNo)?.hotelRoomNo || '';
+      const hotelRoomType = lead.hotelRoomType || bookings.find(b => b.hotelRoomType)?.hotelRoomType || '';
 
       list.push({
         id: gId,
@@ -133,7 +139,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         totalFees: fees,
         agentName: lead.bookedBy || 'Admin',
         agentCode: lead.bookerCode || '',
-        agentPhone: ag?.mobile || ag?.phone || ''
+        agentPhone: ag?.mobile || ag?.phone || '',
+        hotelName,
+        hotelRoomNo,
+        hotelRoomType
       });
     });
 
@@ -223,10 +232,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   /**
-   * Print 6 Tickets per A4 Sheet (2 Columns x 3 Rows)
+   * Print 3 Tickets per A4 Sheet (1 Column x 3 Rows)
    * A4 dimensions: 210mm x 297mm
-   * Each ticket: 105mm x 99mm
-   * For combined bookings: Generates 1 single consolidated ticket with all seats and primary booker name!
+   * Each ticket: 210mm x 99mm
+   * Left: Authority / Gate Pass Copy (56mm)
+   * Middle: Perforation Cut Line (Tear Here) - NO OVERLAP with Passenger Name
+   * Right: Customer Passenger Copy (154mm)
+   * Official Logo with Phone, Email, Web, 3 Color Bars
+   * Displays Hotel & Room details only for Relax / Overnight tours (hidden for Day Long)
+   * Shows Green PAID Stamp / Badge cleanly without overlapping QR code
    */
   const handlePrintBatch = () => {
     if (selectedForPrint.length === 0) return;
@@ -238,9 +252,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>6-Tickets per A4 - Tour লাগবে</title>
+          <title>3-Tickets per A4 - Tour লাগবে.</title>
           <script src="https://cdn.tailwindcss.com"></script>
-          <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700;800&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+          <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700;800;900&family=Inter:wght@500;600;700;800;900&family=Playfair+Display:ital,wght@1,700;1,900&display=swap" rel="stylesheet">
           <style>
             @page { 
               size: A4 portrait; 
@@ -261,126 +275,278 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               width: 210mm;
               height: 297mm;
               display: grid;
-              grid-template-columns: repeat(2, 105mm);
               grid-template-rows: repeat(3, 99mm);
               page-break-after: always;
               box-sizing: border-box;
+              margin: 0;
+              padding: 0;
             }
             .ticket-card {
-              width: 105mm;
+              width: 210mm;
               height: 99mm;
-              border: 0.5pt dashed #cbd5e1;
-              padding: 5mm 6mm;
+              max-height: 99mm;
+              border-bottom: 2px dashed #94a3b8;
               box-sizing: border-box;
               display: flex;
-              flex-direction: column;
-              justify-content: space-between;
+              flex-direction: row;
               overflow: hidden;
               position: relative;
               background: #ffffff;
             }
+            .authority-section {
+              width: 56mm;
+              height: 100%;
+              padding: 3.5mm 3.5mm;
+              background: #f8fafc;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              box-sizing: border-box;
+              border-right: 2px dashed #94a3b8;
+              position: relative;
+            }
+            .customer-section {
+              width: 154mm;
+              height: 100%;
+              padding: 3.5mm 5mm 3.5mm 5mm;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              box-sizing: border-box;
+              position: relative;
+            }
+            .paid-seal-stamp {
+              border: 2px solid #059669;
+              background: #ecfdf5;
+              color: #047857;
+              padding: 3px 8px;
+              border-radius: 8px;
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+              font-family: 'Inter', sans-serif;
+              font-weight: 900;
+              letter-spacing: 0.5px;
+              box-shadow: 0 0 0 1px #059669 inset;
+            }
           </style>
         </head>
         <body onload="window.print()">
-          ${Array.from({ length: Math.ceil(ticketsToPrint.length / 6) }).map((_, pageIdx) => {
-            const pageTickets = ticketsToPrint.slice(pageIdx * 6, (pageIdx + 1) * 6);
+          ${Array.from({ length: Math.ceil(ticketsToPrint.length / 3) }).map((_, pageIdx) => {
+            const pageTickets = ticketsToPrint.slice(pageIdx * 3, (pageIdx + 1) * 3);
             return `
               <div class="page-container">
                 ${pageTickets.map(g => {
                   const info = g.leadBooking;
                   const seatDisplay = g.seatsList.join(', ');
                   const qrData = `TOUR-LAGBE|TICKET:${g.id}|SEATS:${seatDisplay}|PRIMARY:${info.name}|PHONE:${info.mobile}`;
-                  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(qrData)}`;
+                  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrData)}`;
                   
-                  const isBigGroup = g.totalSeats > 4;
+                  // Check tour type (Relax vs Day Long)
+                  const matchedTour = tours.find(t => t.name.toLowerCase() === (info.tourName || '').toLowerCase());
+                  const isDayLong = matchedTour 
+                    ? (matchedTour.tour_type === 'Day Long' || !matchedTour.hotel_applicable)
+                    : (info.tourName?.toLowerCase().includes('day long') || (!info.hotelName && !g.hotelName));
+
+                  const isRelaxTour = !isDayLong;
+                  const hotelDisplay = g.hotelName || info.hotelName || (isRelaxTour ? (info.tourName?.toLowerCase().includes('cox') ? 'Segul Resort Cox' : 'Assigned on Arrival') : '');
+                  const roomDisplay = g.hotelRoomNo || info.hotelRoomNo || (isRelaxTour ? 'Assigned on Arrival' : '');
+                  const roomTypeDisplay = g.hotelRoomType || info.hotelRoomType || '';
+                  
+                  const isPaidFull = (g.totalFees > 0 && g.totalAdvance >= g.totalFees && g.totalDue <= 0);
+
                   return `
                     <div class="ticket-card">
-                      <!-- Ticket Header -->
-                      <div class="flex justify-between items-center border-b border-gray-200 pb-1.5">
-                        <div class="flex items-center gap-2">
-                          <img src="${BUSINESS_INFO.logo}" class="h-8 object-contain" />
-                          <div>
-                            <h1 class="font-black text-xs text-[#001D4A] tracking-tight leading-tight">${BUSINESS_INFO.name}</h1>
-                            <p class="text-[7.5px] font-black text-orange-600 uppercase tracking-wider leading-none mt-0.5">
-                              ${g.totalSeats > 1 ? `★ Combined Pass (${g.totalSeats} Seats)` : '★ Official Boarding Pass'}
-                            </p>
+                      
+                      <!-- 1. AUTHORITY / GATE PASS COPY (বাম পাশে কর্তৃপক্ষ / অফিস কপি) - 56mm Width -->
+                      <div class="authority-section">
+                        <!-- Authority Header with Brand -->
+                        <div class="text-center border-b border-gray-200 pb-1">
+                          <div class="flex items-baseline justify-center">
+                            <span style="font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 900; font-size: 15px; color: #dc2626; line-height: 1;">Tour </span>
+                            <span style="font-family: 'Hind Siliguri', sans-serif; font-weight: 900; font-size: 15px; color: #0284c7; line-height: 1;">লাগবে.</span>
                           </div>
-                        </div>
-                        <div class="bg-[#001D4A] text-white px-2.5 py-1 rounded-xl flex flex-col items-center max-w-[50mm] shadow-sm text-center">
-                          <span class="text-[6.5px] font-black uppercase tracking-widest text-orange-300 leading-none mb-0.5">
-                            ${isBigGroup ? 'GROUP PASS' : (g.totalSeats > 1 ? `SEATS (${g.totalSeats})` : 'SEAT')}
-                          </span>
-                          <span class="text-xs sm:text-sm font-black leading-tight text-amber-300 break-words whitespace-normal text-center">
-                            ${isBigGroup ? `${g.totalSeats} SEATS` : seatDisplay}
+                          <span class="text-[8px] font-black text-orange-700 uppercase bg-orange-100 px-2 py-0.5 rounded-full inline-block mt-0.5">
+                            OFFICE COPY / গেট পাস
                           </span>
                         </div>
-                      </div>
 
-                      ${isBigGroup ? `
-                        <!-- Dedicated Allocated Seats Banner for > 4 Seats -->
-                        <div class="bg-[#001D4A] text-white px-2 py-1 rounded-lg flex items-center justify-between gap-1 my-1 border border-orange-400/30">
-                          <span class="text-[6.5px] font-black uppercase text-orange-300 whitespace-nowrap">ALLOCATED SEATS (${g.totalSeats}):</span>
-                          <span class="text-[8px] font-black text-amber-300 truncate max-w-[70mm] text-right font-mono">${seatDisplay}</span>
-                        </div>
-                      ` : ''}
-
-                      <!-- Tour & Passenger Info -->
-                      <div class="grid grid-cols-12 gap-2 my-auto py-1">
-                        <div class="col-span-8 space-y-1">
-                          <div>
-                            <p class="text-[6.5px] font-black uppercase text-gray-400 tracking-wider leading-none">Primary Passenger</p>
-                            <p class="text-[13px] font-black text-gray-950 truncate leading-tight mt-0.5">${info.name}</p>
-                            <p class="text-[8.5px] font-bold text-gray-600 mt-0.5 flex items-center gap-1">
-                              <span>+880${info.mobile}</span>
-                              <span>•</span>
-                              <span>${info.gender || 'MALE'}</span>
-                              ${info.religion ? `<span>• ${info.religion}</span>` : ''}
-                            </p>
-                          </div>
-
-                          <div class="bg-indigo-50/70 p-1.5 rounded-lg border border-indigo-100/80">
-                            <p class="text-[6.5px] font-black uppercase text-indigo-500 tracking-wider leading-none">Tour Destination</p>
-                            <p class="text-[10.5px] font-black text-indigo-950 leading-tight truncate mt-0.5">${info.tourName || info.busNo}</p>
-                          </div>
-
-                          <div class="flex gap-2 pt-0.5">
-                            <div class="bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200/60 flex-1">
-                              <p class="text-[6.5px] font-black uppercase text-emerald-700 leading-none">Total Paid</p>
-                              <p class="text-[11px] font-black text-emerald-700 leading-none mt-0.5">৳${(g.totalAdvance || 0).toLocaleString()}</p>
-                            </div>
-                            <div class="bg-rose-50 px-2 py-1 rounded-md border border-rose-200/60 flex-1">
-                              <p class="text-[6.5px] font-black uppercase text-rose-700 leading-none">Total Due</p>
-                              <p class="text-[11px] font-black text-rose-700 leading-none mt-0.5">৳${(g.totalDue || 0).toLocaleString()}</p>
-                            </div>
-                          </div>
+                        <!-- Prominent Seat Box -->
+                        <div class="bg-[#001D4A] text-white py-1 px-1.5 rounded-lg text-center my-0.5 border border-amber-400/40 shadow-xs">
+                          <span class="text-[7.5px] text-orange-300 font-bold uppercase block leading-none">SEAT NUMBER</span>
+                          <span class="text-sm font-black text-amber-300 font-mono tracking-wide leading-tight">${seatDisplay}</span>
                         </div>
 
-                        <!-- QR Code & ID -->
-                        <div class="col-span-4 flex flex-col items-center justify-center pl-1 border-l border-dashed border-gray-200">
-                          <div class="p-1 bg-white rounded-lg border border-gray-200 shadow-sm">
-                            <img src="${qrCodeUrl}" class="w-15 h-15 object-contain" />
-                          </div>
-                          <p class="text-[7.5px] text-gray-600 font-black mt-1 uppercase tracking-wider">ID: ${g.id.slice(0, 8)}</p>
-                          <span class="text-[6px] font-bold text-gray-400">Official Pass</span>
-                        </div>
-                      </div>
-
-                      <!-- Ticket Footer -->
-                      <div class="flex justify-between items-center pt-1.5 border-t border-dashed border-gray-200">
-                        <div class="text-[7.5px] font-bold text-gray-600 leading-snug">
-                          <p class="font-extrabold text-gray-900">
-                            Booker: <span class="text-indigo-900">${g.agentName}</span> ${g.agentPhone ? `<span class="text-gray-500 font-semibold">(+880${g.agentPhone})</span>` : ''}
+                        <!-- Passenger & Tour Info -->
+                        <div class="space-y-1 text-[9px]">
+                          <p class="font-black text-gray-950 truncate leading-tight text-[11px]">${info.name}</p>
+                          <p class="font-bold text-gray-700 flex items-center gap-1">
+                            <span>📱 +880${info.mobile}</span>
                           </p>
-                          <p class="text-[6.5px] text-gray-400 mt-0.5">Issue Date: ${new Date(info.bookingDate).toLocaleDateString()}</p>
+                          <p class="font-black text-indigo-950 truncate bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                            🚍 ${info.tourName || info.busNo}
+                          </p>
+                          ${isRelaxTour ? `
+                            <p class="font-bold text-amber-950 truncate bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              🏨 Room: <strong>${roomDisplay}</strong>
+                            </p>
+                          ` : `
+                            <p class="font-bold text-blue-900 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                              🌅 Day Long Tour
+                            </p>
+                          `}
                         </div>
-                        <span class="px-2.5 py-1 rounded-lg text-[7.5px] font-black uppercase tracking-wider ${
-                          (g.totalFees > 0 && g.totalAdvance >= g.totalFees && g.totalDue <= 0)
-                            ? 'bg-emerald-600 text-white shadow-sm' 
-                            : (g.totalAdvance === 0 ? 'bg-rose-600 text-white shadow-sm' : 'bg-amber-500 text-white shadow-sm')
-                        }">
-                          ${(g.totalFees > 0 && g.totalAdvance >= g.totalFees && g.totalDue <= 0) ? '✓ PAID FULL' : (g.totalAdvance === 0 ? '⚠ UNPAID DUE' : '⚠ PARTIAL DUE')}
-                        </span>
+
+                        <!-- Financials & Authority Sign -->
+                        <div class="space-y-1 pt-1 border-t border-gray-200">
+                          <div class="flex justify-between items-center text-[8.5px] font-black">
+                            <span class="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Paid: ৳${g.totalAdvance}</span>
+                            <span class="text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">Due: ৳${g.totalDue}</span>
+                          </div>
+                          
+                          ${isPaidFull ? `
+                            <div class="bg-emerald-600 text-white rounded px-1.5 py-0.5 text-center text-[8px] font-black uppercase tracking-wider shadow-xs">
+                              ✓ PAID FULL (পরিশোধিত)
+                            </div>
+                          ` : ''}
+
+                          <div class="border-t border-dashed border-gray-400 pt-1 text-center">
+                            <span class="text-[7.5px] font-bold text-gray-400 block">Authority Sign: ____________</span>
+                          </div>
+                        </div>
                       </div>
+
+                      <!-- 2. CUSTOMER COPY (ডান পাশে গ্রাহক কপি) - 154mm Width -->
+                      <div class="customer-section">
+                        <!-- Top Row: Official Logo with Contact & 3 Color Bars + Seat Badge -->
+                        <div class="flex justify-between items-start border-b border-gray-200 pb-1.5">
+                          <!-- Official Tour লাগবে Logo & Contact Details -->
+                          <div class="flex items-center gap-2">
+                            <div>
+                              <div class="flex items-baseline">
+                                <span style="font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 900; font-size: 22px; color: #dc2626; line-height: 1;">Tour </span>
+                                <span style="font-family: 'Hind Siliguri', sans-serif; font-weight: 900; font-size: 22px; color: #0284c7; line-height: 1;">লাগবে.</span>
+                              </div>
+                              <div style="font-family: 'Inter', sans-serif; font-size: 8px; font-weight: 700; color: #1e293b; line-height: 1.25; margin-top: 2px;">
+                                <div class="flex items-center gap-1">
+                                  <span class="text-red-600 text-[8px]">📞</span> <span>+8801303599936</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                  <span class="text-red-600 text-[8px]">✉️</span> <span>tourlagbee@gmail.com</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                  <span class="text-red-600 text-[8px]">🌐</span> <span>https://www.tourlagbe.online/</span>
+                                </div>
+                              </div>
+                            </div>
+                            <!-- 3 Vertical Color Bars -->
+                            <div class="flex flex-col w-2.5 h-10 rounded overflow-hidden shadow-2xs border border-gray-200 shrink-0 ml-1">
+                              <div class="flex-1 bg-[#0097a7]"></div>
+                              <div class="flex-1 bg-[#dc2626]"></div>
+                              <div class="flex-1 bg-[#f57c00]"></div>
+                            </div>
+                          </div>
+
+                          <!-- Top Right: Big Prominent Seat Badge & Optional Paid Seal -->
+                          <div class="flex items-center gap-2">
+                            ${isPaidFull ? `
+                              <div class="paid-seal-stamp text-[9.5px] shadow-sm">
+                                <span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span>
+                                <span>✓ PAID FULL (পরিশোধিত)</span>
+                              </div>
+                            ` : ''}
+                            
+                            <!-- Big Prominent Seat Box -->
+                            <div class="bg-[#001D4A] text-white px-4 py-1.5 rounded-xl shadow-sm border border-amber-400/50 text-center min-w-[95px]">
+                              <span class="text-[8px] font-black uppercase text-orange-300 block leading-none">SEAT NUMBER</span>
+                              <span class="text-lg font-black text-amber-300 tracking-wider font-mono leading-tight">${seatDisplay}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Middle Row: Passenger Info (Large Font, No Overlap) & Billing + QR -->
+                        <div class="grid grid-cols-12 gap-3 my-auto py-1 items-center">
+                          <div class="col-span-8 space-y-1.5">
+                            <div>
+                              <!-- Passenger Name - Extra Large, Bold & Clean -->
+                              <h2 class="text-[17px] font-black text-gray-950 truncate leading-tight tracking-tight">${info.name}</h2>
+                              <p class="text-[10.5px] font-bold text-gray-700 mt-0.5 flex items-center gap-2 flex-wrap">
+                                <span>📱 +880${info.mobile}</span>
+                                <span>•</span>
+                                <span>${info.gender || 'Male'}</span>
+                                ${info.religion ? `<span>• ${info.religion}</span>` : ''}
+                                ${info.address ? `<span>• 📍 ${info.address}</span>` : ''}
+                              </p>
+                            </div>
+
+                            <div class="flex items-center gap-2 flex-wrap">
+                              <span class="text-[11px] font-black text-indigo-950 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-md truncate">
+                                🚍 ${info.tourName || info.busNo}
+                              </span>
+                              ${g.totalSeats > 1 ? `
+                                <span class="text-[9.5px] font-black text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-md border border-purple-200">
+                                  ${g.totalSeats} Seats Combined
+                                </span>
+                              ` : ''}
+                              ${isDayLong ? `
+                                <span class="text-[9.5px] font-black text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-md">
+                                  Day Long Tour 🌅
+                                </span>
+                              ` : ''}
+                            </div>
+
+                            ${isRelaxTour ? `
+                              <!-- Hotel & Room Allocation Details (Relax Tour Only) -->
+                              <div class="bg-amber-50/90 border border-amber-300 rounded-lg px-2.5 py-1 flex items-center justify-between text-[10px] text-amber-950 font-bold">
+                                <span class="truncate max-w-[95mm]">
+                                  🏨 Hotel: <strong class="text-amber-900">${hotelDisplay}</strong>
+                                </span>
+                                <span class="bg-amber-600 text-white px-2 py-0.5 rounded font-mono text-[9.5px] whitespace-nowrap ml-1 shadow-xs">
+                                  🚪 ROOM: ${roomDisplay} ${roomTypeDisplay ? `(${roomTypeDisplay})` : ''}
+                                </span>
+                              </div>
+                            ` : ''}
+                          </div>
+
+                          <!-- Billing & Clean QR Code (NO OVERLAP) -->
+                          <div class="col-span-4 flex items-center justify-end gap-2.5 pl-2 border-l border-dashed border-gray-200">
+                            <div class="space-y-1 text-right">
+                              <div class="bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 text-emerald-800 text-[9.5px] font-black leading-tight">
+                                Paid: ৳${(g.totalAdvance || 0).toLocaleString()}
+                              </div>
+                              <div class="bg-rose-50 px-2 py-1 rounded-md border border-rose-200 text-rose-800 text-[9.5px] font-black leading-tight">
+                                Due: ৳${(g.totalDue || 0).toLocaleString()}
+                              </div>
+                              <p class="text-[8px] font-bold text-gray-500 uppercase mt-0.5">Total: ৳${g.totalFees.toLocaleString()}</p>
+                            </div>
+                            
+                            <!-- Clean QR Code with NO watermark over it -->
+                            <div class="p-1 bg-white rounded-lg border border-gray-300 shadow-sm shrink-0 text-center">
+                              <img src="${qrCodeUrl}" class="w-13 h-13 object-contain mx-auto" />
+                              <p class="text-[7px] text-gray-500 font-mono font-bold leading-none mt-1">ID:${g.id.slice(0, 7)}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Bottom Footer Row: Large Clear Details -->
+                        <div class="flex justify-between items-center pt-1.5 border-t border-dashed border-gray-200 text-[9.5px]">
+                          <div class="font-bold text-gray-700">
+                            Booker: <span class="text-indigo-900 font-black">${g.agentName}</span> ${g.agentPhone ? `(+880${g.agentPhone})` : ''}
+                            <span class="text-gray-400 ml-2.5">Date: ${new Date(info.bookingDate).toLocaleDateString()}</span>
+                          </div>
+                          
+                          ${isPaidFull ? `
+                            <span class="text-emerald-700 font-black flex items-center gap-1">
+                              <i class="fas fa-check-circle"></i> সম্পূর্ণ পরিশোধিত (100% Paid)
+                            </span>
+                          ` : `
+                            <span class="px-2.5 py-0.5 rounded-md text-[8.5px] font-black uppercase ${g.totalAdvance === 0 ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white'}">
+                              ${g.totalAdvance === 0 ? '⚠ UNPAID DUE' : '⚠ PARTIAL DUE'}
+                            </span>
+                          `}
+                        </div>
+                      </div>
+
                     </div>
                   `;
                 }).join('')}
@@ -396,6 +562,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   /**
    * Print 10 Food Tokens per A4 Sheet (2 Columns x 5 Rows)
+   * Uses Official Logo with Contact & 3 Color Bars
    * A4 dimensions: 210mm x 297mm
    * Each token: 105mm x 59.4mm
    */
@@ -409,9 +576,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>10-Tokens per A4 - Tour লাগবে</title>
+          <title>10-Tokens per A4 - Tour লাগবে.</title>
           <script src="https://cdn.tailwindcss.com"></script>
-          <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700;800;900&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+          <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700;800;900&family=Inter:wght@500;600;700;800;900&family=Playfair+Display:ital,wght@1,700;1,900&display=swap" rel="stylesheet">
           <style>
             @page { 
               size: A4 portrait; 
@@ -441,7 +608,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               width: 105mm;
               height: 59.4mm;
               border: 0.5pt dashed #cbd5e1; 
-              padding: 3.5mm 5mm; 
+              padding: 3mm 4.5mm; 
               display: flex; 
               flex-direction: column; 
               justify-content: space-between;
@@ -452,7 +619,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             }
             .token-watermark {
               position: absolute;
-              font-size: 28px;
+              font-size: 26px;
               font-weight: 900;
               color: rgba(249, 115, 22, 0.05);
               z-index: 0;
@@ -474,29 +641,36 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   <div class="token-card">
                     <div class="token-watermark">🍽️ ${foodType.toUpperCase()}</div>
                     
-                    <!-- Token Header - Enhanced Font Sizes -->
+                    <!-- Token Header with Official Logo -->
                     <div class="relative z-10 flex justify-between items-center border-b border-gray-200 pb-1">
-                      <div class="flex items-center gap-2">
-                        <img src="${BUSINESS_INFO.logo}" class="h-6 object-contain" />
+                      <div class="flex items-center gap-1.5">
                         <div>
-                          <span class="text-[11px] font-black text-[#001D4A] uppercase tracking-tight leading-none block">${BUSINESS_INFO.name}</span>
-                          <span class="text-[9px] font-black text-orange-600 uppercase tracking-wider leading-none mt-0.5 block">🍽️ ${foodType} Token</span>
+                          <div class="flex items-baseline">
+                            <span style="font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 900; font-size: 15px; color: #dc2626; line-height: 1;">Tour </span>
+                            <span style="font-family: 'Hind Siliguri', sans-serif; font-weight: 900; font-size: 15px; color: #0284c7; line-height: 1;">লাগবে.</span>
+                          </div>
+                          <span class="text-[8px] font-black text-orange-600 uppercase tracking-wider leading-none mt-0.5 block">🍽️ ${foodType} Token</span>
+                        </div>
+                        <div class="flex flex-col w-2 h-6 rounded overflow-hidden shadow-2xs border border-gray-200 shrink-0 ml-0.5">
+                          <div class="flex-1 bg-[#0097a7]"></div>
+                          <div class="flex-1 bg-[#dc2626]"></div>
+                          <div class="flex-1 bg-[#f57c00]"></div>
                         </div>
                       </div>
                       <div class="bg-[#001D4A] text-white px-3 py-1 rounded-xl flex items-center gap-1.5 shadow-sm">
-                        <span class="text-[8px] font-black uppercase text-orange-300 leading-none">SEAT</span>
-                        <span class="text-base font-black leading-none text-amber-300">${info.seatNo}</span>
+                        <span class="text-[8.5px] font-black uppercase text-orange-300 leading-none">SEAT</span>
+                        <span class="text-base font-black leading-none text-amber-300 font-mono">${info.seatNo}</span>
                       </div>
                     </div>
 
                     <!-- Passenger & Meal Info - Larger & Clearer -->
                     <div class="relative z-10 flex justify-between items-center py-0.5">
                       <div class="max-w-[155px]">
-                        <p class="text-[13px] font-black text-gray-950 truncate leading-tight">${info.name}</p>
-                        <p class="text-[9.5px] font-extrabold text-indigo-900 mt-0.5 truncate">${info.tourName || info.busNo}</p>
+                        <p class="text-[14px] font-black text-gray-950 truncate leading-tight">${info.name}</p>
+                        <p class="text-[10px] font-extrabold text-indigo-900 mt-0.5 truncate">${info.tourName || info.busNo}</p>
                       </div>
                       <div class="text-right bg-orange-50/90 px-2.5 py-1 rounded-lg border border-orange-200">
-                        <span class="text-[7.5px] font-black text-orange-600 uppercase block leading-none">Serving Time</span>
+                        <span class="text-[8px] font-black text-orange-600 uppercase block leading-none">Serving Time</span>
                         <span class="text-[12px] font-black text-orange-700 leading-none mt-0.5 block">${foodTime}</span>
                       </div>
                     </div>
@@ -504,16 +678,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                     <!-- Token Menu & 1 Person -->
                     <div class="relative z-10 flex justify-between items-center pt-1 border-t border-dashed border-gray-200">
                       <div class="truncate max-w-[170px]">
-                        <span class="text-[8px] font-black text-gray-400 uppercase mr-1">Menu:</span>
-                        <span class="text-[9.5px] font-bold text-gray-800">${foodMenu}</span>
+                        <span class="text-[8.5px] font-black text-gray-400 uppercase mr-1">Menu:</span>
+                        <span class="text-[10px] font-bold text-gray-800">${foodMenu}</span>
                       </div>
-                      <span class="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[7.5px] font-black uppercase">1 Person</span>
+                      <span class="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[8px] font-black uppercase">1 Person</span>
                     </div>
 
                     <!-- Mandatory Red Warning Note -->
                     <div class="relative z-10 pt-0.5 mt-0.5 border-t border-red-200 text-center">
-                      <p class="text-[7.5px] font-black text-red-600 uppercase tracking-tight leading-none">
-                        ⚠️ You have to pay, If you ordered out the selected Items
+                      <p class="text-[7.5px] font-bold text-red-600 leading-none">
+                        ⚠️ এই টোকেনটি খাবার গ্রহণের সময় খাবার কাউন্টারে জমা দিন।
                       </p>
                     </div>
                   </div>

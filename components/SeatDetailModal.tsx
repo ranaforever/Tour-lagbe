@@ -389,9 +389,9 @@ ${!info.isPrimary && isGroup ? `💺 *Seat Passenger:* ${info.name}\n` : ''}📍
                    {/* Conditional Payment Status - STRICT CHECK */}
                    <div className="w-full sm:w-auto text-center sm:text-right shrink-0">
                       {isTrulyPaidFull ? (
-                        <div className="px-4 py-2 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider bg-emerald-600 text-white shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 justify-center w-full sm:w-auto">
-                          <i className="fas fa-check-circle"></i>
-                          <span>✓ PAID FULL</span>
+                        <div className="px-4 py-2 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider bg-emerald-600 text-white shadow-md shadow-emerald-600/20 inline-flex items-center gap-2 justify-center w-full sm:w-auto border-2 border-emerald-500">
+                          <i className="fas fa-check-circle text-emerald-200"></i>
+                          <span>✓ PAID (পরিশোধিত)</span>
                         </div>
                       ) : (
                         <div className="bg-rose-50 px-3.5 py-1.5 rounded-xl border border-rose-200 text-center sm:text-right w-full sm:w-auto">

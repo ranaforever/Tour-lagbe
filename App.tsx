@@ -228,6 +228,7 @@ const App: React.FC = () => {
           tourFees: b.tour_fees,
           customerType: b.customer_type,
           customerTypeFees: b.customer_type_fees,
+          customExtraFee: b.custom_extra_fee || meta.customExtraFee || 0,
           discountAmount: b.discount_amount,
           advanceAmount: b.advance_amount,
           dueAmount: b.due_amount,
@@ -425,7 +426,8 @@ const App: React.FC = () => {
             totalGroupSeats: b.totalGroupSeats,
             groupSeatsList: b.groupSeatsList,
             hotelRoomNo: b.hotelRoomNo,
-            hotelName: b.hotelName
+            hotelName: b.hotelName,
+            customExtraFee: b.customExtraFee
           };
         });
         localStorage.setItem('tl_booking_meta', JSON.stringify(groupMeta));
@@ -444,6 +446,7 @@ const App: React.FC = () => {
         tour_fees: info.tourFees,
         customer_type: info.customerType,
         customer_type_fees: info.customerTypeFees,
+        custom_extra_fee: info.customExtraFee || 0,
         discount_amount: info.discountAmount,
         advance_amount: info.advanceAmount,
         due_amount: info.dueAmount,
