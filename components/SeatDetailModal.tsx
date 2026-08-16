@@ -1,6 +1,6 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { BookingInfo, Booker } from '../types';
-import { BUSINESS_INFO } from '../constants';
+import { BUSINESS_INFO, getTicketLogo } from '../constants';
 import PaymentModal from './PaymentModal';
 
 interface SeatDetailModalProps {
@@ -274,17 +274,18 @@ ${!info.isPrimary && isGroup ? `💺 *Seat Passenger:* ${info.name}\n` : ''}📍
                 
                 {/* Header of Ticket */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-gray-200">
-                   <div className="flex items-center gap-2.5">
-                      <img src={BUSINESS_INFO.logo} alt="Logo" className="h-9 sm:h-11 object-contain" />
-                      <div>
-                        <h4 className="text-sm sm:text-base font-black text-[#001D4A] tracking-tight leading-none">{BUSINESS_INFO.name}</h4>
-                        <p className="text-[9px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider leading-tight mt-1">
-                          {BUSINESS_INFO.address}
-                        </p>
-                      </div>
+                   <div className="flex items-center gap-3">
+                      <img src={getTicketLogo()} alt="Ticket Logo" className="h-14 sm:h-20 max-w-[300px] object-contain drop-shadow-xs" />
                    </div>
                    
-                   {/* Seat Number Display - If > 4 seats, concise badge on top & dedicated banner below; else show directly */}
+                   {/* Watermark Logo (জলছাপ) */}
+                 <img 
+                   src={BUSINESS_INFO.logo} 
+                   alt="Watermark" 
+                   className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 sm:w-72 h-56 sm:h-72 object-contain opacity-[0.06] select-none z-0" 
+                 />
+
+                 {/* Seat Number Display - If > 4 seats, concise badge on top & dedicated banner below; else show directly */}
                    <div className="w-full sm:w-auto self-stretch sm:self-auto bg-[#001D4A] text-white px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl flex flex-col items-center sm:items-end justify-center shadow-md">
                      <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.15em] text-orange-400 leading-none mb-1">
                        {displayTotalSeats > 4 ? 'GROUP PASS' : (displayTotalSeats > 1 ? `SEATS (${displayTotalSeats})` : 'SEAT')}

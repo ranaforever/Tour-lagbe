@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Tour, Booker, CustomerType, BusData, BookingInfo, BusCustomLayout, Hotel, HotelRoom } from '../types';
-import { BUSINESS_INFO } from '../constants';
+import { BUSINESS_INFO, getTicketLogo, DEFAULT_TICKET_LOGO } from '../constants';
 import { supabase } from '../supabase';
 import BusLayoutEditor from './BusLayoutEditor';
 import HotelManager from './HotelManager';
@@ -83,6 +83,50 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const [printFilterTour, setPrintFilterTour] = useState('');
   const [printFilterBooker, setPrintFilterBooker] = useState('');
+
+  // Dedicated Ticket & Token Logo State
+  const [ticketLogoUrl, setTicketLogoUrl] = useState<string>(() => getTicketLogo());
+
+  const handleSaveTicketLogo = async (newLogo: string) => {
+    const finalLogo = newLogo.trim() || DEFAULT_TICKET_LOGO;
+    setTicketLogoUrl(finalLogo);
+    localStorage.setItem('tl_ticket_logo', finalLogo);
+    try {
+      await supabase.from('tl_notices').upsert({
+        id: 'cfg_ticket_logo',
+        title: 'Config Ticket Logo',
+        content: finalLogo,
+        is_active: false
+      });
+    } catch (e) {}
+    notify?.("টিকিট ও টোকেন লোগো সফলভাবে সেভ করা হয়েছে!", 'success');
+  };
+
+  const handleResetTicketLogo = async () => {
+    setTicketLogoUrl(DEFAULT_TICKET_LOGO);
+    localStorage.setItem('tl_ticket_logo', DEFAULT_TICKET_LOGO);
+    try {
+      await supabase.from('tl_notices').upsert({
+        id: 'cfg_ticket_logo',
+        title: 'Config Ticket Logo',
+        content: DEFAULT_TICKET_LOGO,
+        is_active: false
+      });
+    } catch (e) {}
+    notify?.("টিকিট ও টোকেন লোগো ডিফল্টে রিসেট করা হয়েছে!", 'info');
+  };
+
+  const handleFileUploadTicketLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        handleSaveTicketLogo(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const allBookings: BookingInfo[] = useMemo(() => 
     buses.flatMap(b => b.seats.filter(s => s.isBooked).map(s => s.bookingInfo!)),
@@ -315,6 +359,30 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               box-sizing: border-box;
               position: relative;
             }
+            .ticket-watermark {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 140px;
+              height: 140px;
+              opacity: 0.065;
+              pointer-events: none;
+              z-index: 0;
+              object-fit: contain;
+            }
+            .authority-watermark {
+              position: absolute;
+              top: 55%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 80px;
+              height: 80px;
+              opacity: 0.055;
+              pointer-events: none;
+              z-index: 0;
+              object-fit: contain;
+            }
             .paid-seal-stamp {
               border: 2px solid #059669;
               background: #ecfdf5;
@@ -354,18 +422,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   const roomTypeDisplay = g.hotelRoomType || info.hotelRoomType || '';
                   
                   const isPaidFull = (g.totalFees > 0 && g.totalAdvance >= g.totalFees && g.totalDue <= 0);
+                  const hasManySeats = g.totalSeats > 4;
 
                   return `
                     <div class="ticket-card">
                       
                       <!-- 1. AUTHORITY / GATE PASS COPY (বাম পাশে কর্তৃপক্ষ / অফিস কপি) - 56mm Width -->
                       <div class="authority-section">
+                        <!-- Authority Watermark Logo (জলছাপ) -->
+                        <img src="${BUSINESS_INFO.logo}" class="authority-watermark" alt="" />
+
                         <!-- Authority Header with Brand -->
-                        <div class="text-center border-b border-gray-200 pb-1">
-                          <div class="flex items-baseline justify-center">
-                            <span style="font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 900; font-size: 15px; color: #dc2626; line-height: 1;">Tour </span>
-                            <span style="font-family: 'Hind Siliguri', sans-serif; font-weight: 900; font-size: 15px; color: #0284c7; line-height: 1;">লাগবে.</span>
-                          </div>
+                        <div class="text-center border-b border-gray-200 pb-1 flex flex-col items-center">
+                          <img src="${getTicketLogo()}" alt="Logo" style="height: 34px; max-width: 175px; object-fit: contain; margin-bottom: 2px;" />
                           <span class="text-[8px] font-black text-orange-700 uppercase bg-orange-100 px-2 py-0.5 rounded-full inline-block mt-0.5">
                             OFFICE COPY / গেট পাস
                           </span>
@@ -373,9 +442,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
                         <!-- Prominent Seat Box -->
                         <div class="bg-[#001D4A] text-white py-1 px-1.5 rounded-lg text-center my-0.5 border border-amber-400/40 shadow-xs">
-                          <span class="text-[7.5px] text-orange-300 font-bold uppercase block leading-none">SEAT NUMBER</span>
-                          <span class="text-sm font-black text-amber-300 font-mono tracking-wide leading-tight">${seatDisplay}</span>
+                          <span class="text-[7.5px] text-orange-300 font-bold uppercase block leading-none">
+                            ${hasManySeats ? `TOTAL SEATS (${g.totalSeats})` : 'SEAT NUMBER'}
+                          </span>
+                          <span class="text-sm font-black text-amber-300 font-mono tracking-wide leading-tight">
+                            ${hasManySeats ? `${g.totalSeats} SEATS` : seatDisplay}
+                          </span>
                         </div>
+
+                        ${hasManySeats ? `
+                          <!-- Dedicated Seats Details for >4 seats on Authority Copy -->
+                          <div class="bg-[#001D4A] text-white px-1.5 py-0.5 rounded text-center my-0.5 border border-amber-400/40">
+                            <span class="text-[6.5px] text-orange-300 font-bold uppercase block leading-none">ALL SEATS:</span>
+                            <span class="text-[8.5px] font-black text-amber-300 font-mono leading-tight break-words">${seatDisplay}</span>
+                          </div>
+                        ` : ''}
 
                         <!-- Passenger & Tour Info -->
                         <div class="space-y-1 text-[9px]">
@@ -418,36 +499,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
                       <!-- 2. CUSTOMER COPY (ডান পাশে গ্রাহক কপি) - 154mm Width -->
                       <div class="customer-section">
-                        <!-- Top Row: Official Logo with Contact & 3 Color Bars + Seat Badge -->
-                        <div class="flex justify-between items-start border-b border-gray-200 pb-1.5">
-                          <!-- Official Tour লাগবে Logo & Contact Details -->
+                        <!-- Customer Watermark Logo (জলছাপ) -->
+                        <img src="${BUSINESS_INFO.logo}" class="ticket-watermark" alt="" />
+
+                        <!-- Top Row: Official Ticket Logo + Seat Badge -->
+                        <div class="flex justify-between items-start border-b border-gray-200 pb-1">
+                          <!-- Official Ticket & Token Logo (Extra Large & Clear) -->
                           <div class="flex items-center gap-2">
-                            <div>
-                              <div class="flex items-baseline">
-                                <span style="font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 900; font-size: 22px; color: #dc2626; line-height: 1;">Tour </span>
-                                <span style="font-family: 'Hind Siliguri', sans-serif; font-weight: 900; font-size: 22px; color: #0284c7; line-height: 1;">লাগবে.</span>
-                              </div>
-                              <div style="font-family: 'Inter', sans-serif; font-size: 8px; font-weight: 700; color: #1e293b; line-height: 1.25; margin-top: 2px;">
-                                <div class="flex items-center gap-1">
-                                  <span class="text-red-600 text-[8px]">📞</span> <span>+8801303599936</span>
-                                </div>
-                                <div class="flex items-center gap-1">
-                                  <span class="text-red-600 text-[8px]">✉️</span> <span>tourlagbee@gmail.com</span>
-                                </div>
-                                <div class="flex items-center gap-1">
-                                  <span class="text-red-600 text-[8px]">🌐</span> <span>https://www.tourlagbe.online/</span>
-                                </div>
-                              </div>
-                            </div>
-                            <!-- 3 Vertical Color Bars -->
-                            <div class="flex flex-col w-2.5 h-10 rounded overflow-hidden shadow-2xs border border-gray-200 shrink-0 ml-1">
-                              <div class="flex-1 bg-[#0097a7]"></div>
-                              <div class="flex-1 bg-[#dc2626]"></div>
-                              <div class="flex-1 bg-[#f57c00]"></div>
-                            </div>
+                            <img src="${getTicketLogo()}" alt="Tour লাগবে." style="height: 56px; max-width: 280px; object-fit: contain;" />
                           </div>
 
-                          <!-- Top Right: Big Prominent Seat Badge & Optional Paid Seal -->
+                          <!-- Top Right: Seat Badge & Optional Paid Seal -->
                           <div class="flex items-center gap-2">
                             ${isPaidFull ? `
                               <div class="paid-seal-stamp text-[9.5px] shadow-sm">
@@ -456,21 +518,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                               </div>
                             ` : ''}
                             
-                            <!-- Big Prominent Seat Box -->
-                            <div class="bg-[#001D4A] text-white px-4 py-1.5 rounded-xl shadow-sm border border-amber-400/50 text-center min-w-[95px]">
-                              <span class="text-[8px] font-black uppercase text-orange-300 block leading-none">SEAT NUMBER</span>
-                              <span class="text-lg font-black text-amber-300 tracking-wider font-mono leading-tight">${seatDisplay}</span>
+                            <!-- Prominent Seat Box -->
+                            <div class="bg-[#001D4A] text-white px-3.5 py-1.5 rounded-xl shadow-sm border border-amber-400/50 text-center min-w-[95px]">
+                              <span class="text-[7.5px] font-black uppercase text-orange-300 block leading-none">
+                                ${hasManySeats ? `TOTAL SEATS` : 'SEAT NUMBER'}
+                              </span>
+                              <span class="text-base font-black text-amber-300 tracking-wider font-mono leading-tight">
+                                ${hasManySeats ? `${g.totalSeats} SEATS` : seatDisplay}
+                              </span>
                             </div>
                           </div>
                         </div>
 
-                        <!-- Middle Row: Passenger Info (Large Font, No Overlap) & Billing + QR -->
-                        <div class="grid grid-cols-12 gap-3 my-auto py-1 items-center">
-                          <div class="col-span-8 space-y-1.5">
+                        ${hasManySeats ? `
+                          <!-- Highlighted Dedicated Seat Numbers Banner for > 4 Seats (Image 3 Request) -->
+                          <div class="bg-[#001D4A] text-white px-3 py-1.5 rounded-lg flex items-center justify-between border border-amber-400/50 shadow-xs my-0.5">
+                            <div class="flex items-center gap-1.5 shrink-0">
+                              <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+                              <span class="text-[8.5px] font-black uppercase text-orange-300 tracking-wider">ALL BOOKED SEATS (${g.totalSeats}):</span>
+                            </div>
+                            <span class="text-sm font-black text-amber-300 font-mono tracking-widest leading-none">${seatDisplay}</span>
+                          </div>
+                        ` : ''}
+
+                        <!-- Middle Row: Passenger Info & Billing + QR (Completely Separated, No Overlap) -->
+                        <div class="flex items-center justify-between gap-3 my-auto py-1 w-full overflow-hidden">
+                          <!-- Left: Passenger, Route & Hotel Details -->
+                          <div class="flex-1 min-w-0 space-y-1 pr-2">
                             <div>
                               <!-- Passenger Name - Extra Large, Bold & Clean -->
-                              <h2 class="text-[17px] font-black text-gray-950 truncate leading-tight tracking-tight">${info.name}</h2>
-                              <p class="text-[10.5px] font-bold text-gray-700 mt-0.5 flex items-center gap-2 flex-wrap">
+                              <h2 class="text-[16px] font-black text-gray-950 truncate leading-tight tracking-tight">${info.name}</h2>
+                              <p class="text-[10px] font-bold text-gray-700 mt-0.5 flex items-center gap-1.5 truncate">
                                 <span>📱 +880${info.mobile}</span>
                                 <span>•</span>
                                 <span>${info.gender || 'Male'}</span>
@@ -479,17 +557,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                               </p>
                             </div>
 
-                            <div class="flex items-center gap-2 flex-wrap">
-                              <span class="text-[11px] font-black text-indigo-950 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-md truncate">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                              <span class="text-[10.5px] font-black text-indigo-950 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded truncate max-w-[200px]">
                                 🚍 ${info.tourName || info.busNo}
                               </span>
                               ${g.totalSeats > 1 ? `
-                                <span class="text-[9.5px] font-black text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-md border border-purple-200">
+                                <span class="text-[9px] font-black text-purple-700 bg-purple-100 px-2 py-0.5 rounded border border-purple-200">
                                   ${g.totalSeats} Seats Combined
                                 </span>
                               ` : ''}
                               ${isDayLong ? `
-                                <span class="text-[9.5px] font-black text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-md">
+                                <span class="text-[9px] font-black text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
                                   Day Long Tour 🌅
                                 </span>
                               ` : ''}
@@ -497,31 +575,31 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
                             ${isRelaxTour ? `
                               <!-- Hotel & Room Allocation Details (Relax Tour Only) -->
-                              <div class="bg-amber-50/90 border border-amber-300 rounded-lg px-2.5 py-1 flex items-center justify-between text-[10px] text-amber-950 font-bold">
-                                <span class="truncate max-w-[95mm]">
+                              <div class="bg-amber-50 border border-amber-300 rounded px-2.5 py-1 flex items-center justify-between text-[9.5px] text-amber-950 font-bold max-w-full">
+                                <span class="truncate pr-1">
                                   🏨 Hotel: <strong class="text-amber-900">${hotelDisplay}</strong>
                                 </span>
-                                <span class="bg-amber-600 text-white px-2 py-0.5 rounded font-mono text-[9.5px] whitespace-nowrap ml-1 shadow-xs">
+                                <span class="bg-amber-600 text-white px-2 py-0.5 rounded font-mono text-[9px] whitespace-nowrap shrink-0 shadow-xs">
                                   🚪 ROOM: ${roomDisplay} ${roomTypeDisplay ? `(${roomTypeDisplay})` : ''}
                                 </span>
                               </div>
                             ` : ''}
                           </div>
 
-                          <!-- Billing & Clean QR Code (NO OVERLAP) -->
-                          <div class="col-span-4 flex items-center justify-end gap-2.5 pl-2 border-l border-dashed border-gray-200">
+                          <!-- Right: Billing & Clean QR Code (Strict Fixed Width, Guaranteed No Overlap) -->
+                          <div class="shrink-0 flex items-center justify-end gap-2.5 pl-3 border-l border-dashed border-gray-200">
                             <div class="space-y-1 text-right">
-                              <div class="bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 text-emerald-800 text-[9.5px] font-black leading-tight">
+                              <div class="bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200 text-emerald-800 text-[10px] font-black leading-tight whitespace-nowrap">
                                 Paid: ৳${(g.totalAdvance || 0).toLocaleString()}
                               </div>
-                              <div class="bg-rose-50 px-2 py-1 rounded-md border border-rose-200 text-rose-800 text-[9.5px] font-black leading-tight">
+                              <div class="bg-rose-50 px-2.5 py-1 rounded border border-rose-200 text-rose-800 text-[10px] font-black leading-tight whitespace-nowrap">
                                 Due: ৳${(g.totalDue || 0).toLocaleString()}
                               </div>
-                              <p class="text-[8px] font-bold text-gray-500 uppercase mt-0.5">Total: ৳${g.totalFees.toLocaleString()}</p>
+                              <p class="text-[8px] font-bold text-gray-500 uppercase mt-0.5 whitespace-nowrap">Total: ৳${g.totalFees.toLocaleString()}</p>
                             </div>
                             
-                            <!-- Clean QR Code with NO watermark over it -->
-                            <div class="p-1 bg-white rounded-lg border border-gray-300 shadow-sm shrink-0 text-center">
+                            <!-- Clean QR Code with ID -->
+                            <div class="p-1 bg-white rounded-lg border border-gray-300 shadow-xs shrink-0 text-center">
                               <img src="${qrCodeUrl}" class="w-13 h-13 object-contain mx-auto" />
                               <p class="text-[7px] text-gray-500 font-mono font-bold leading-none mt-1">ID:${g.id.slice(0, 7)}</p>
                             </div>
@@ -529,18 +607,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                         </div>
 
                         <!-- Bottom Footer Row: Large Clear Details -->
-                        <div class="flex justify-between items-center pt-1.5 border-t border-dashed border-gray-200 text-[9.5px]">
-                          <div class="font-bold text-gray-700">
+                        <div class="flex justify-between items-center pt-1 border-t border-dashed border-gray-200 text-[9.5px]">
+                          <div class="font-bold text-gray-700 truncate">
                             Booker: <span class="text-indigo-900 font-black">${g.agentName}</span> ${g.agentPhone ? `(+880${g.agentPhone})` : ''}
-                            <span class="text-gray-400 ml-2.5">Date: ${new Date(info.bookingDate).toLocaleDateString()}</span>
+                            <span class="text-gray-400 ml-2">Date: ${new Date(info.bookingDate).toLocaleDateString()}</span>
                           </div>
                           
                           ${isPaidFull ? `
-                            <span class="text-emerald-700 font-black flex items-center gap-1">
+                            <span class="text-emerald-700 font-black flex items-center gap-1 shrink-0">
                               <i class="fas fa-check-circle"></i> সম্পূর্ণ পরিশোধিত (100% Paid)
                             </span>
                           ` : `
-                            <span class="px-2.5 py-0.5 rounded-md text-[8.5px] font-black uppercase ${g.totalAdvance === 0 ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white'}">
+                            <span class="px-2.5 py-0.5 rounded-md text-[8.5px] font-black uppercase shrink-0 ${g.totalAdvance === 0 ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white'}">
                               ${g.totalAdvance === 0 ? '⚠ UNPAID DUE' : '⚠ PARTIAL DUE'}
                             </span>
                           `}
@@ -608,7 +686,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               width: 105mm;
               height: 59.4mm;
               border: 0.5pt dashed #cbd5e1; 
-              padding: 3mm 4.5mm; 
+              padding: 3.5mm 4.5mm; 
               display: flex; 
               flex-direction: column; 
               justify-content: space-between;
@@ -619,9 +697,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             }
             .token-watermark {
               position: absolute;
-              font-size: 26px;
+              font-size: 24px;
               font-weight: 900;
-              color: rgba(249, 115, 22, 0.05);
+              color: rgba(249, 115, 22, 0.04);
               z-index: 0;
               pointer-events: none;
               white-space: nowrap;
@@ -629,6 +707,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               left: 50%;
               transform: translate(-50%, -50%) rotate(-8deg);
               letter-spacing: 2px;
+            }
+            .token-logo-watermark {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 85px;
+              height: 85px;
+              opacity: 0.065;
+              pointer-events: none;
+              z-index: 0;
+              object-fit: contain;
             }
           </style>
         </head>
@@ -639,23 +729,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               <div class="token-page">
                 ${pageBookings.map(info => `
                   <div class="token-card">
+                    <!-- Token Watermarks (Text + Logo জলছাপ) -->
                     <div class="token-watermark">🍽️ ${foodType.toUpperCase()}</div>
+                    <img src="${BUSINESS_INFO.logo}" class="token-logo-watermark" alt="" />
                     
-                    <!-- Token Header with Official Logo -->
+                    <!-- Token Header with Extra Large Official Ticket & Token Logo -->
                     <div class="relative z-10 flex justify-between items-center border-b border-gray-200 pb-1">
                       <div class="flex items-center gap-1.5">
-                        <div>
-                          <div class="flex items-baseline">
-                            <span style="font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 900; font-size: 15px; color: #dc2626; line-height: 1;">Tour </span>
-                            <span style="font-family: 'Hind Siliguri', sans-serif; font-weight: 900; font-size: 15px; color: #0284c7; line-height: 1;">লাগবে.</span>
-                          </div>
-                          <span class="text-[8px] font-black text-orange-600 uppercase tracking-wider leading-none mt-0.5 block">🍽️ ${foodType} Token</span>
-                        </div>
-                        <div class="flex flex-col w-2 h-6 rounded overflow-hidden shadow-2xs border border-gray-200 shrink-0 ml-0.5">
-                          <div class="flex-1 bg-[#0097a7]"></div>
-                          <div class="flex-1 bg-[#dc2626]"></div>
-                          <div class="flex-1 bg-[#f57c00]"></div>
-                        </div>
+                        <img src="${getTicketLogo()}" alt="Logo" style="height: 44px; max-width: 200px; object-fit: contain;" />
+                        <span class="text-[8.5px] font-black text-orange-600 uppercase tracking-wider leading-none ml-1 block">🍽️ ${foodType} Token</span>
                       </div>
                       <div class="bg-[#001D4A] text-white px-3 py-1 rounded-xl flex items-center gap-1.5 shadow-sm">
                         <span class="text-[8.5px] font-black uppercase text-orange-300 leading-none">SEAT</span>
@@ -664,31 +746,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
 
                     <!-- Passenger & Meal Info - Larger & Clearer -->
-                    <div class="relative z-10 flex justify-between items-center py-0.5">
+                    <div class="relative z-10 flex justify-between items-center py-1">
                       <div class="max-w-[155px]">
-                        <p class="text-[14px] font-black text-gray-950 truncate leading-tight">${info.name}</p>
-                        <p class="text-[10px] font-extrabold text-indigo-900 mt-0.5 truncate">${info.tourName || info.busNo}</p>
+                        <p class="text-[15px] font-black text-gray-950 truncate leading-tight">${info.name}</p>
+                        <p class="text-[11px] font-extrabold text-indigo-900 mt-0.5 truncate">🚍 ${info.tourName || info.busNo}</p>
                       </div>
-                      <div class="text-right bg-orange-50/90 px-2.5 py-1 rounded-lg border border-orange-200">
-                        <span class="text-[8px] font-black text-orange-600 uppercase block leading-none">Serving Time</span>
-                        <span class="text-[12px] font-black text-orange-700 leading-none mt-0.5 block">${foodTime}</span>
+                      <div class="text-right bg-orange-50/90 px-3 py-1.5 rounded-xl border border-orange-200">
+                        <span class="text-[8.5px] font-black text-orange-600 uppercase block leading-none">Serving Time</span>
+                        <span class="text-[13px] font-black text-orange-700 leading-none mt-0.5 block">${foodTime}</span>
                       </div>
                     </div>
 
                     <!-- Token Menu & 1 Person -->
-                    <div class="relative z-10 flex justify-between items-center pt-1 border-t border-dashed border-gray-200">
+                    <div class="relative z-10 flex justify-between items-center pt-1.5 border-t border-dashed border-gray-200">
                       <div class="truncate max-w-[170px]">
-                        <span class="text-[8.5px] font-black text-gray-400 uppercase mr-1">Menu:</span>
-                        <span class="text-[10px] font-bold text-gray-800">${foodMenu}</span>
+                        <span class="text-[9px] font-black text-gray-400 uppercase mr-1">Menu:</span>
+                        <span class="text-[11px] font-bold text-gray-800">${foodMenu}</span>
                       </div>
-                      <span class="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[8px] font-black uppercase">1 Person</span>
-                    </div>
-
-                    <!-- Mandatory Red Warning Note -->
-                    <div class="relative z-10 pt-0.5 mt-0.5 border-t border-red-200 text-center">
-                      <p class="text-[7.5px] font-bold text-red-600 leading-none">
-                        ⚠️ এই টোকেনটি খাবার গ্রহণের সময় খাবার কাউন্টারে জমা দিন।
-                      </p>
+                      <span class="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[8.5px] font-black uppercase">1 Person</span>
                     </div>
                   </div>
                 `).join('')}
@@ -727,7 +802,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     { id: 'hotel', label: 'Hotel & Rooms', icon: 'fa-hotel' },
     { id: 'agents', label: 'Agents', icon: 'fa-user-tie' },
     { id: 'types', label: 'Pricing', icon: 'fa-tags' },
-    { id: 'print', label: 'Tickets (6/A4)', icon: 'fa-print' },
+    { id: 'print', label: 'Tickets (3/A4)', icon: 'fa-print' },
     { id: 'food', label: 'Food (10/A4)', icon: 'fa-utensils' },
     { id: 'notices', label: 'Notices', icon: 'fa-bullhorn' },
     { id: 'database', label: 'Database SQL', icon: 'fa-database' }
@@ -1120,20 +1195,91 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       )}
 
-      {/* SUB-TAB 6: PRINT TICKETS (6 PER A4) */}
+      {/* SUB-TAB 6: PRINT TICKETS (3 PER A4) */}
       {activeSubTab === 'print' && (
         <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+          
+          {/* Ticket & Food Token Dedicated Logo Settings Card */}
+          <div className="bg-white p-4 sm:p-6 md:p-7 rounded-2xl sm:rounded-[32px] shadow-sm border border-orange-100">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-gray-100 pb-3 mb-4">
+              <div>
+                <h4 className="font-black text-xs sm:text-sm uppercase text-[#001D4A] tracking-wider flex items-center gap-2">
+                  <i className="fas fa-image text-orange-500"></i>
+                  <span>টিকিট ও টোকেন লোগো সেটিংস (Ticket & Token Dedicated Logo)</span>
+                </h4>
+                <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold mt-0.5">
+                  এই লোগোটি শুধুমাত্র টিকিট ও টোকেন প্রিন্ট ও ভিউতে ব্যবহৃত হবে। মূল সিস্টেমের বাকি সব জায়গায় আগের লোগোটি অপরিবর্তিত থাকবে।
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResetTicketLogo}
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all"
+                >
+                  <i className="fas fa-rotate-left mr-1"></i> ডিফল্ট লোগো
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-center">
+              {/* Preview Box */}
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-3 rounded-2xl border border-dashed border-gray-300 flex flex-col items-center justify-center min-h-[90px]">
+                <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest mb-1.5">লাইভ প্রিভিউ (Ticket Logo Preview)</span>
+                <img 
+                  src={ticketLogoUrl} 
+                  alt="Ticket Logo Preview" 
+                  className="h-10 sm:h-12 max-w-[260px] object-contain drop-shadow-xs" 
+                />
+              </div>
+
+              {/* URL & Upload Inputs */}
+              <div className="lg:col-span-2 space-y-2.5">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={ticketLogoUrl.startsWith('data:image') && ticketLogoUrl.length > 100 ? 'Custom SVG / Data Image Loaded' : ticketLogoUrl}
+                    onChange={(e) => setTicketLogoUrl(e.target.value)}
+                    placeholder="https://example.com/ticket-logo.png অথবা SVG ডাটা"
+                    className="flex-1 px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-[#001D4A] outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSaveTicketLogo(ticketLogoUrl)}
+                    className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm transition-all shrink-0 active:scale-95"
+                  >
+                    <i className="fas fa-floppy-disk mr-1"></i> সেভ করুন
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">
+                    <i className="fas fa-cloud-arrow-up"></i>
+                    <span>ছবি আপলোড করুন (Upload Image File)</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUploadTicketLogo}
+                      className="hidden"
+                    />
+                  </label>
+                  <span className="text-[9px] text-gray-400 font-bold">PNG, JPG, WebP বা SVG ফরম্যাট সাপোর্টেড</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-[#001D4A] p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[32px] text-white shadow-xl flex flex-col gap-4 sm:gap-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
                 <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full">
-                  A4 Batch Print Layout (6 Tickets / Page)
+                  A4 Batch Print Layout (3 Tickets / Page)
                 </span>
                 <h3 className="text-lg sm:text-xl font-black uppercase tracking-tighter mt-2 leading-tight">
                   টিকেট প্রিন্ট উইজার্ড (Batch Ticket Printing)
                 </h3>
                 <p className="text-[9px] sm:text-[10px] font-black text-white/50 uppercase tracking-widest mt-0.5">
-                  ১টি A4 পেজে ৬টি সুবিন্যস্ত টিকেট প্রিন্ট হবে (2x3 Grid)
+                  ১টি A4 পেজে ৩টি সুবিন্যস্ত টিকেট (বাম পাশে গেটপাস + ডান পাশে গ্রাহক কপি) প্রিন্ট হবে
                 </p>
               </div>
               <div className="flex gap-3">

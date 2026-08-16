@@ -191,6 +191,12 @@ const App: React.FC = () => {
         } catch (e) {}
       }
 
+      // Sync Ticket & Token Logo across devices
+      const ticketLogoNotice = allRawNotices.find((n: any) => n.id === 'cfg_ticket_logo');
+      if (ticketLogoNotice?.content) {
+        localStorage.setItem('tl_ticket_logo', ticketLogoNotice.content);
+      }
+
       const now = new Date();
       const validLocks: SeatLock[] = fetchedLocks.filter(lock => new Date(lock.expires_at) > now);
 
@@ -1179,8 +1185,10 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-[#001D4A] flex items-center justify-center p-6 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
         <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-10 relative z-10 animate-in zoom-in duration-500">
-           <div className="flex flex-col items-center mb-10">
-              <img src={BUSINESS_INFO.logo} alt="Logo" className="w-24 mb-6" />
+           <div className="flex flex-col items-center mb-8">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 bg-white p-2 rounded-3xl shadow-lg border border-gray-100 mb-4 flex items-center justify-center overflow-hidden">
+                <img src={BUSINESS_INFO.logo} alt="Logo" className="w-full h-full object-contain" />
+              </div>
               <h1 className="text-3xl font-black text-[#001D4A] tracking-tighter uppercase leading-none">{BUSINESS_INFO.name}</h1>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Cloud Registry & Management System</p>
            </div>
@@ -1237,7 +1245,9 @@ const App: React.FC = () => {
       {/* Desktop Sidebar Navigation */}
       <nav className="hidden md:flex fixed top-0 left-0 bottom-0 w-24 bg-[#001D4A] flex-col items-center justify-between py-8 shadow-2xl z-50">
         <div className="flex flex-col items-center w-full">
-          <img src={BUSINESS_INFO.logo} alt="Logo" className="w-14 mb-12" />
+          <div className="w-14 h-14 bg-white/10 p-1.5 rounded-2xl mb-10 shadow-sm flex items-center justify-center overflow-hidden border border-white/10">
+            <img src={BUSINESS_INFO.logo} alt="Logo" className="w-full h-full object-contain drop-shadow-sm" />
+          </div>
           {navItems.map(item => (
             <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`w-full py-5 flex flex-col items-center transition-all ${activeTab === item.id ? 'bg-orange-500 text-white shadow-lg' : 'text-white/40 hover:text-white/80'}`}>
               <i className={`fas ${item.icon} text-xl mb-1`}></i>
@@ -1274,7 +1284,9 @@ const App: React.FC = () => {
       <main className="flex-grow md:ml-24 p-3 sm:p-5 md:p-10 pb-24 md:pb-10 min-w-0 max-w-full overflow-x-hidden">
         <header className="flex justify-between items-center mb-4 sm:mb-6 md:mb-8 gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <div className="md:hidden w-9 h-9 sm:w-10 sm:h-10 bg-white p-1.5 sm:p-2 rounded-xl shadow-sm shrink-0"><img src={BUSINESS_INFO.logo} className="w-full h-full object-contain" /></div>
+            <div className="md:hidden w-10 h-10 bg-white p-1 rounded-xl shadow-sm shrink-0 border border-gray-100 flex items-center justify-center overflow-hidden">
+              <img src={BUSINESS_INFO.logo} alt="Logo" className="w-full h-full object-contain" />
+            </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-[#001D4A] uppercase tracking-tighter leading-tight truncate">
                 {activeTab === 'booking' ? 'Seat Plan & Booking' : activeTab === 'rooms' ? 'Hotel & Room Allocation' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
